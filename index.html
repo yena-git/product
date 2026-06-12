@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>셀러 엑셀 자동 변환 등록 · 프로토타입</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="sample_data.js"></script>
+<style>
+  :root{
+    --grip:#ff3d5a; --grip-d:#e02a47; --ink:#1a1d24; --sub:#6b7280;
+    --line:#e6e8ee; --bg:#f5f6f8; --ok:#16a34a; --warn:#f59e0b; --off:#fff7e6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+       background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5}
+  header{background:#fff;border-bottom:1px solid var(--line);padding:16px 28px;display:flex;align-items:center;gap:12px}
+  header .logo{font-weight:800;color:var(--grip);font-size:18px;letter-spacing:-.5px}
+  header .title{font-weight:700}
+  header .tag{margin-left:auto;font-size:12px;color:var(--sub);background:#f0f1f4;padding:4px 10px;border-radius:20px}
+  .wrap{max-width:1080px;margin:0 auto;padding:24px 28px 80px}
+
+  .steps{display:flex;gap:8px;margin:8px 0 24px}
+  .step{flex:1;display:flex;align-items:center;gap:10px;padding:12px 14px;background:#fff;border:1px solid var(--line);border-radius:12px;opacity:.55;transition:.2s}
+  .step.active{opacity:1;border-color:var(--grip);box-shadow:0 2px 10px rgba(255,61,90,.12)}
+  .step.done{opacity:1}
+  .step .num{width:26px;height:26px;border-radius:50%;background:#eceef3;color:var(--sub);display:grid;place-items:center;font-weight:700;font-size:13px}
+  .step.active .num{background:var(--grip);color:#fff}
+  .step.done .num{background:var(--ok);color:#fff}
+  .step .lbl{font-weight:600;font-size:13px}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px}
+  .card h2{margin:0 0 4px;font-size:17px}
+  .card .desc{color:var(--sub);margin:0 0 20px;font-size:13px}
+
+  .panel{display:none}
+  .panel.active{display:block}
+
+  .typepick{display:flex;gap:14px;margin-bottom:20px}
+  .typecard{flex:1;border:2px solid var(--line);border-radius:14px;padding:18px;cursor:pointer;transition:.15s}
+  .typecard:hover{border-color:#cfd3dc}
+  .typecard.sel{border-color:var(--grip);background:#fff5f6}
+  .typecard b{display:block;margin-bottom:4px}
+  .typecard span{color:var(--sub);font-size:12px}
+
+  /* 템플릿 선택 */
+  .tplpick{margin-bottom:18px}
+  .tplgroup{margin-bottom:12px}
+  .tplgroup .gl{font-size:12px;font-weight:700;color:var(--sub);margin-bottom:6px}
+  .tplcards{display:flex;gap:10px;flex-wrap:wrap}
+  .tplcard{flex:1;min-width:200px;border:2px solid var(--line);border-radius:12px;padding:13px 15px;cursor:pointer;transition:.15s}
+  .tplcard:hover{border-color:#cfd3dc}
+  .tplcard.sel{border-color:var(--grip);background:#fff5f6}
+  .tplcard b{display:block;font-size:13.5px}
+  .tplcard span{color:var(--sub);font-size:11.5px}
+  .tplcard .cols{font-size:11px;color:#9aa0ac;margin-top:3px}
+  .extrabtn{background:none;border:1px dashed var(--line);border-radius:8px;padding:7px 12px;font-size:12.5px;color:var(--sub);cursor:pointer}
+  .mapconst{font-size:11px;color:var(--sub)}
+  tr.extra-row{display:none}
+  tr.extra-row.show{display:table-row}
+  td .roletag{font-size:10px;font-weight:700;color:#4f46e5;background:#eef2ff;border-radius:5px;padding:1px 6px;margin-left:6px}
+
+  /* 옵션 종류명 소스 — 매핑 테이블에 녹인 행 */
+  #mapTable tr.okrow td{vertical-align:middle}
+  #mapTable tr.okrow .okprev{color:#1d4ed8;font-weight:700}
+  #mapTable tr.okrow .okmuted{color:var(--sub)}
+  #mapTable tr.okdetail td{background:#f6f8ff;border-top:0;padding-top:6px;padding-bottom:10px}
+  #mapTable tr.okdetail .manualrow{display:flex;flex-wrap:wrap;gap:8px}
+  #mapTable tr.okdetail .mi{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--sub)}
+  #mapTable tr.okdetail .mi input{padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;min-width:110px}
+  #mapTable tr.okdetail .oksub{font-size:11.5px;color:var(--sub);margin-left:8px}
+  #mapTable tr.okrow td > b{border-left:3px solid var(--grip);padding-left:8px}
+  .drop{border:2px dashed #cfd3dc;border-radius:14px;padding:36px;text-align:center;color:var(--sub)}
+  .drop b{color:var(--ink)}
+
+  .sheetpick{margin-top:16px}
+  .sheetpick .lbl{font-size:13px;font-weight:700;margin-bottom:8px}
+  .sheetlist{display:flex;flex-wrap:wrap;gap:8px}
+  .sheetchip{border:1.5px solid var(--line);border-radius:10px;padding:9px 13px;cursor:pointer;background:#fff;transition:.15s;min-width:130px}
+  .sheetchip:hover{border-color:#cfd3dc}
+  .sheetchip.sel{border-color:var(--grip);background:#fff5f6}
+  .sheetchip.empty{opacity:.45;cursor:not-allowed}
+  .sheetchip .sn{font-weight:700;font-size:13px}
+  .sheetchip .rec{font-size:10px;font-weight:700;color:#fff;background:var(--grip);border-radius:20px;padding:1px 7px;margin-left:6px}
+  .sheetchip .meta{color:var(--sub);font-size:11.5px;margin-top:3px}
+
+  .btn{appearance:none;border:0;border-radius:10px;padding:11px 20px;font-weight:700;font-size:14px;cursor:pointer;transition:.15s}
+  .btn.primary{background:var(--grip);color:#fff}
+  .btn.primary:hover{background:var(--grip-d)}
+  .btn.ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}
+  .btn.dl{background:#fff;border:1px solid var(--grip);color:var(--grip-d)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .actions{display:flex;justify-content:space-between;margin-top:22px}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+  th{color:var(--sub);font-weight:600;font-size:12px;background:#fafbfc}
+  select{padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff;min-width:160px}
+  .samplecol{color:var(--sub);font-size:12px}
+  .pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:4px}
+  .pill.req{background:#ffe9ec;color:var(--grip-d)}
+  .pill.axis{background:#eef2ff;color:#4f46e5}
+  .pill.opt{background:#eef9f0;color:var(--ok)}
+
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
+  .stat .k{font-size:12px;color:var(--sub)}
+  .stat .v{font-size:24px;font-weight:800;margin-top:2px}
+  .stat.warn .v{color:var(--warn)} .stat.off .v{color:var(--grip)}
+
+  .notice{background:#f0f7ff;border:1px solid #cfe3ff;color:#1d4ed8;padding:12px 14px;border-radius:10px;font-size:13px;margin-bottom:12px}
+  .notice.warn{background:#fff8ec;border-color:#ffe3ad;color:#92600a}
+  .notice.muted{background:#f7f8fa;border-color:#e6e8ee;color:#6b7280}
+
+  .progress{height:10px;background:#eceef3;border-radius:20px;overflow:hidden;margin:18px 0}
+  .progress > div{height:100%;background:var(--grip);width:0;transition:width .1s}
+  .result{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+  .result .stat .v.ok{color:var(--ok)} .result .stat .v.fail{color:var(--grip)}
+  .faillist{margin-top:14px;font-size:13px}
+  .faillist li{margin:3px 0}
+  .muted{color:#b6bcc8}
+
+  /* 등록 결과 모달 (실제 그립 팝업 디자인) */
+  .overlay{position:fixed;inset:0;background:rgba(20,22,30,.55);display:none;align-items:center;justify-content:center;z-index:50}
+  .overlay.show{display:flex}
+  .modal{background:#fff;border-radius:14px;width:560px;max-width:92vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .modal .mhead{display:flex;align-items:center;gap:8px;padding:18px 22px;border-bottom:1px solid var(--line)}
+  .modal .mhead h3{margin:0;font-size:16px;font-weight:800}
+  .modal .mhead .donebadge{font-size:11px;font-weight:700;color:var(--grip-d);background:#ffe9ec;padding:2px 8px;border-radius:6px}
+  .modal .mhead .x{margin-left:auto;border:0;background:none;font-size:20px;color:var(--sub);cursor:pointer;line-height:1}
+  .modal .mbody{padding:18px 22px;overflow:auto}
+  .sumline{font-size:14px;margin-bottom:6px}
+  .sumline .chip{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:6px;margin-right:8px}
+  .chip.ok{background:#e9f8ee;color:var(--ok)} .chip.fail{background:#ffe9ec;color:var(--grip-d)}
+  .sumline b{font-weight:800}
+  .sumline .sub{color:var(--sub);font-size:13px}
+  .errlist{margin-top:14px;background:#faf7f8;border:1px solid #f0e6e9;border-radius:10px;padding:10px 14px;max-height:230px;overflow:auto;font-size:13px}
+  .errlist .erow{padding:3px 0}
+  .errlist .rng{color:var(--ink);margin-right:10px}
+  .errlist .msg{color:var(--grip-d)}
+  .mnotes{margin:16px 0 4px;padding-left:18px;color:var(--sub);font-size:12.5px;line-height:1.7}
+  .mnotes li{margin:2px 0}
+  .mfoot{border-top:1px solid var(--line);padding:14px 22px;display:flex;align-items:center;gap:12px}
+  .mfoot .chk{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink);cursor:pointer;margin-right:auto}
+  .mfoot .btn{padding:10px 26px}
+
+  /* 검증 요약 히어로 */
+  .vhero{display:flex;align-items:center;gap:16px;padding:18px 20px;border-radius:14px;margin-bottom:16px;border:1px solid}
+  .vhero.bad{background:#fff5f6;border-color:#ffd0d8}
+  .vhero.good{background:#eefaf0;border-color:#c7ecd0}
+  .vhero .big{font-size:34px;font-weight:900;line-height:1}
+  .vhero.bad .big{color:var(--grip-d)} .vhero.good .big{color:var(--ok)}
+  .vhero .vtxt{flex:1}
+  .vhero .vtxt b{font-size:15px}
+  .vhero .vtxt .sub{color:var(--sub);font-size:12.5px;margin-top:2px}
+
+  /* 자동 교정 배너 */
+  .autofix{background:#f1f7ff;border:1px solid #cfe3ff;border-radius:12px;padding:14px 16px;margin-bottom:14px}
+  .autofix .afhead{display:flex;align-items:center;gap:10px}
+  .autofix .afhead b{color:#1d4ed8}
+  .autofix .afhead .btn{margin-left:auto;padding:8px 16px;font-size:13px}
+  .autofix .aflist{display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:10px}
+  .autofix .aflist label{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#334155;cursor:pointer}
+  .autofix .aflist .cnt{color:#1d4ed8;font-weight:700}
+
+  /* 일괄 지정 도구 */
+  .bulkbar{background:#fafbfc;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+  .bulkbar .bhead{font-size:13px;font-weight:700;margin-bottom:10px}
+  .bulkrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  .bulkrow .lab{font-size:12.5px;color:var(--sub);min-width:118px}
+  .bulkrow select{min-width:200px;padding:6px 9px}
+  .srcmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;margin-top:6px}
+  .srcmap .smrow{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+  .srcmap .smrow .tag{font-size:12px;font-weight:700;background:#eef2ff;color:#4f46e5;border-radius:6px;padding:2px 8px;white-space:nowrap}
+  .srcmap .smrow .cnt{font-size:11px;color:var(--sub)}
+  .srcmap .smrow select{flex:1;min-width:0;padding:5px 7px;font-size:12px}
+
+  /* 그리드 도구바 */
+  .gridtools{display:flex;align-items:center;gap:12px;margin-bottom:10px;font-size:13px;flex-wrap:wrap}
+  .gridtools .seg{display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--sub)}
+  .gridtools .cnt{margin-left:auto;color:var(--sub)}
+  .gridtools .cnt b{color:var(--ink)}
+
+  /* 검증 그리드 */
+  .gridwrap{border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:560px}
+  table.vgrid{font-size:12.5px}
+  table.vgrid th{position:sticky;top:0;z-index:2;white-space:nowrap}
+  table.vgrid td{padding:6px 8px;border-bottom:1px solid #f0f0f0}
+  table.vgrid tr.okrow td:first-child{color:var(--ok)}
+  table.vgrid .st{font-weight:700;font-size:11px;white-space:nowrap}
+  table.vgrid .st.bad{color:var(--grip-d)} table.vgrid .st.ok{color:var(--ok)}
+  table.vgrid input,table.vgrid select{width:100%;min-width:90px;padding:5px 6px;font-size:12.5px;border:1px solid var(--line);border-radius:6px;background:#fff}
+  table.vgrid td.err input,table.vgrid td.err select{border-color:var(--grip);background:#fff5f6}
+  table.vgrid td.warn input,table.vgrid td.warn select{border-color:var(--warn);background:#fffaf0}
+  table.vgrid td .emsg{display:block;font-size:11px;color:var(--grip-d);margin-top:3px}
+  table.vgrid td.warn .emsg{color:#92600a}
+  table.vgrid .opt{color:var(--sub);white-space:nowrap}
+  .pager{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;font-size:13px}
+  .pager button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 11px;cursor:pointer}
+  .pager button:disabled{opacity:.4;cursor:default}
+
+  .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:#1a1d24;color:#fff;
+         padding:11px 20px;border-radius:24px;font-size:13px;font-weight:600;opacity:0;transition:.25s;z-index:80;pointer-events:none}
+  .toast.show{opacity:1;bottom:40px}
+  .chip.hold{background:#fff4e6;color:#b45309}
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">GRIP</span>
+  <span class="title">비즈센터 · 셀러 엑셀 자동 변환 등록</span>
+  <span class="tag">프로토타입</span>
+</header>
+
+<div class="wrap">
+  <div class="steps">
+    <div class="step active" data-step="1"><span class="num">1</span><span class="lbl">업로드</span></div>
+    <div class="step" data-step="2"><span class="num">2</span><span class="lbl">필드 매칭</span></div>
+    <div class="step" data-step="3"><span class="num">3</span><span class="lbl">검증 &amp; 수정</span></div>
+    <div class="step" data-step="4"><span class="num">4</span><span class="lbl">등록</span></div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="panel active" id="p1">
+    <div class="card">
+      <h2>1. 등록 템플릿 선택 &amp; 엑셀 업로드</h2>
+      <p class="desc">먼저 등록할 <b>그립 템플릿</b>을 선택하세요. 셀러가 보유한 엑셀을 올리면 그 템플릿 컬럼 기준으로 매핑합니다. <b>클릭메이트 양식은 자동 인식되어 매핑 없이 호환 등록</b>됩니다.</p>
+      <div id="tplPick" class="tplpick"></div>
+      <div class="actions">
+        <button class="btn ghost" id="useSample">샘플 데이터로 시작 (셀러_상품 리스트)</button>
+        <button class="btn primary" id="to2" disabled>다음: 필드 매칭 →</button>
+      </div>
+      <div id="sheetPick" class="sheetpick" style="display:none"></div>
+      <div id="loadInfo" class="notice" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="panel" id="p2">
+    <div class="card">
+      <h2>2. 필드 매칭</h2>
+      <p class="desc">선택한 <b id="tplNameM">그립 템플릿</b>의 컬럼에 연결할 <b>셀러 엑셀 컬럼</b>을 지정합니다. 컬럼명이 유사하면 자동 추천되며, 직접 선택/수정할 수 있습니다. <b>카테고리·상품정보고시 상품군은 1단계에서 미리 지정</b>되어 여기서는 다루지 않습니다.</p>
+      <div id="cmBanner" class="notice" style="display:none"></div>
+      <div id="profBanner" class="notice" style="display:none"></div>
+      <table id="mapTable"><thead><tr>
+        <th style="width:30%">그립 템플릿 컬럼</th><th style="width:34%">매핑할 셀러 컬럼</th><th>예시 값</th>
+      </tr></thead><tbody></tbody></table>
+      <div id="extraToggle" style="margin-top:10px"></div>
+      <div id="reqInfo" class="notice" style="margin-top:16px"></div>
+      <div class="actions">
+        <button class="btn ghost" id="back1">← 이전</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn ghost" id="saveProf">⭐ 이 매핑 프로파일로 저장</button>
+          <button class="btn primary" id="to3">다음: 검증 &amp; 수정 →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="panel" id="p3">
+    <div class="card">
+      <h2>3. 등록 전 검증 &amp; 수정</h2>
+      <p class="desc">등록 <b>전에</b> 그립 검증 규칙을 전수 적용했습니다. 실패할 항목을 <b>화면에서 바로 고치고</b>, 기계적 오류는 <b>원클릭 자동 교정</b>으로 처리하세요. 등록 후 이메일을 기다릴 필요가 없습니다.</p>
+      <div id="vhero"></div>
+      <div class="cards" id="statCards"></div>
+      <div id="autofixBox"></div>
+      <div id="bulkBox"></div>
+      <div class="gridtools">
+        <label class="seg"><input type="checkbox" id="onlyErr"> 오류만 보기</label>
+        <button class="btn ghost" id="jumpErr" style="padding:6px 12px;font-size:12px">다음 오류로 이동 ↓</button>
+        <span class="cnt" id="gridCnt"></span>
+      </div>
+      <div class="gridwrap"><table class="vgrid" id="vgrid"><thead></thead><tbody></tbody></table></div>
+      <div class="pager" id="pager"></div>
+      <div style="margin-top:14px"><button class="btn dl" id="download">⬇ 변환 템플릿 다운받기 (.xlsx)</button></div>
+      <div class="actions">
+        <button class="btn ghost" id="back2">← 이전</button>
+        <button class="btn primary" id="to4">등록 실행 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="panel" id="p4">
+    <div class="card">
+      <h2>4. 등록</h2>
+      <p class="desc">검증을 통과한 상품만 등록합니다. 한 건이 실패해도 전체가 막히지 않으며, 자동 추가된 조합은 판매 OFF로 등록됩니다.</p>
+      <div id="regRunning">
+        <div class="progress"><div id="bar"></div></div>
+        <div id="regStatus" class="desc">등록 준비 중…</div>
+      </div>
+      <div id="regDone" style="display:none">
+        <div class="notice" style="background:#eefaf0;border-color:#c7ecd0;color:#15803d">✅ 등록이 완료되었습니다. 결과 팝업을 확인하세요.</div>
+        <div class="actions">
+          <button class="btn ghost" id="restart">처음으로</button>
+          <button class="btn primary" id="reopen">결과 다시 보기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 등록 결과 모달 -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="mhead">
+      <h3>상품 일괄 등록 결과</h3>
+      <span class="donebadge">완료</span>
+      <button class="x" id="mclose">×</button>
+    </div>
+    <div class="mbody">
+      <div class="sumline"><span class="chip ok">성공</span><b id="mOk">0</b>건 상품 등록 완료</div>
+      <div class="sumline"><span class="chip hold">수정 대기</span><b id="mHold">0</b>건
+        <span class="sub">검증 미통과로 등록하지 않고 따로 보관했습니다. 고쳐서 바로 등록할 수 있습니다.</span></div>
+      <div class="errlist" id="mErrList"></div>
+      <ul class="mnotes">
+        <li><b>한 건이 실패해도 전체가 막히지 않습니다.</b> 통과한 상품은 즉시 등록되었습니다.</li>
+        <li>수정 대기 항목은 <b>[수정 대기 다시 고치기]</b>로 검증 화면에 다시 불러와 바로 고칠 수 있습니다.</li>
+        <li>실패 사유는 아래 [실패 내역 다운로드]로 받을 수 있습니다. (등록 후 이메일 대기 불필요)</li>
+      </ul>
+    </div>
+    <div class="mfoot">
+      <label class="chk"><input type="checkbox" id="mDlChk" checked> 실패 내역 다운로드</label>
+      <button class="btn ghost" id="mFix">수정 대기 다시 고치기</button>
+      <button class="btn primary" id="mConfirm">확인</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const state = { template:'flash_simple_indiv', header:[], rawName:{}, rows:[],
+  mapping:{}, roleMap:{}, converted:null, pendingMap:null, clickmate:null, profileNote:null,
+  presetCat:'', presetGosi:'', gridPage:0, optKind:{mode:'header', manual:{}, col:''}, autoFillCombos:true };
+let workbook=null, sheetMetas=[];
+
+const norm = s => (s==null?'':String(s)).replace(/\s+/g,' ').trim();
+const esc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const matchKey = s => norm(s).toLowerCase().replace(/[\s()\[\].'"\-]/g,'');
+const cleanName = s => norm(String(s||'').replace(/\([^)]*\)/g,'').replace(/['"][^'"]*['"]/g,''));
+const EMOJI_RE = /[\u{1F000}-\u{1FAFF}\u{2190}-\u{21FF}\u{2300}-\u{27BF}\u{2B00}-\u{2BFF}\u{2600}-\u{26FF}\u{FE00}-\u{FE0F}\u{200D}\u{2122}\u{2139}\u{3030}\u{303D}]/gu;
+const stripEmoji = s => norm(String(s||'').replace(EMOJI_RE,''));
+const hasEmoji = s => EMOJI_RE.test(String(s||''));
+const toNumber = v => { if(v==null) return NaN; const t=String(v).replace(/[₩,\s]/g,'').replace(/원$/,''); return t===''?NaN:Number(t); };
+const isNumLike = v => { const n=toNumber(v); return v!=='' && v!=null && !isNaN(n); };
+
+// ── 6개 그립 템플릿 레지스트리 (실제 템플릿 컬럼 기준) ───────────────────────
+const F = {
+  flashSimpleI:['카테고리','상품 정보고시 상품군','상품명 (필수)','대표 이미지 (선택)','라이브가 (필수)','옵션 종류명 (선택)','옵션1 (선택)','옵션2 (선택)','옵션3 (선택)','추가 금액 (선택)','재고 수량 (선택)'],
+  flashSimpleC:['카테고리','상품 정보고시 상품군','상품명 (필수)','대표 이미지 (선택)','라이브가 (필수)','옵션 종류명 (선택)','옵션1 (선택)','옵션2 (선택)','옵션3 (선택)','재고 수량 (선택)'],
+  flashDetailI:['자체 상품 코드 (선택)','카테고리','상품명 (필수)','상품 설명 (선택)','대표 이미지 (선택)','상품 상세 (선택)','원산지 (선택)','부가세 (선택)','주문제작 (선택)','주문제작 상품 - 반품/교환 불가 여부 (선택)','브랜드 (선택)','모델명 (선택)','제조사 (선택)','검색 태그 (선택)','재고 수량 (선택)','최소 구매 수량 (선택)','최대 구매 수량 (선택)','쿠폰 적용 불가 상품 (선택)','해외 직구 상품 (선택)','상품 가격 (선택)','상시 할인가 (선택)','라이브가 (필수)','옵션 종류명 (선택)','옵션1 (선택)','옵션2 (선택)','옵션3 (선택)','추가 금액 (선택)','옵션별 재고 (선택)','상품 정보고시 상품군','색상 (선택)','제조자 (선택)','세탁방법 및 취급시 주의사항 (선택)','치수 (선택)','제조연월 (선택)','제조국 (선택)','품질보증기준 (선택)','제품 소재 (선택)','A/S 책임자와 전화번호 (선택)'],
+  normalI:['자체 상품 코드 (선택)','카테고리','상품명 (필수)','상품 설명 (선택)','대표 이미지 (선택)','상품 상세 (선택)','원산지 (필수)','부가세 (선택)','주문제작 (선택)','반품/교환 불가 (선택)','브랜드 (선택)','모델명 (선택)','제조사 (선택)','검색 태그 (필수)','재고 수량 (필수)','최소 구매 수량 (선택)','최대 구매 수량 (선택)','쿠폰 적용 불가 상품 (선택)','해외 직구 상품 (선택)','판매 시작 일시 (선택)','판매 종료 일시 (선택)','상품 가격 (필수)','상시 할인가 (선택)','라이브가 (선택)','옵션 종류명 (선택)','옵션1 (선택)','옵션2 (선택)','옵션3 (선택)','추가 금액 (선택)','옵션별 재고 (선택)','상품 정보고시 상품군','색상 (선택)','제조자 (선택)','세탁방법 및 취급시 주의사항 (선택)','치수 (선택)','제조연월 (선택)','제조국 (선택)','품질보증기준 (선택)','제품 소재 (선택)','A/S 책임자와 전화번호 (선택)'],
+};
+F.flashDetailC = F.flashDetailI.filter(c=>!/추가 금액/.test(c));
+F.normalC = F.normalI.filter(c=>!/추가 금액/.test(c));
+const TEMPLATES = {
+  normal_indiv:       {label:'개별입력', group:'일반상품', mode:'indiv', cols:F.normalI},
+  normal_comma:       {label:'콤마입력', group:'일반상품', mode:'comma', cols:F.normalC},
+  flash_simple_indiv: {label:'간편 · 개별입력', group:'플래시상품', mode:'indiv', cols:F.flashSimpleI},
+  flash_simple_comma: {label:'간편 · 콤마입력', group:'플래시상품', mode:'comma', cols:F.flashSimpleC},
+  flash_detail_indiv: {label:'상세 · 개별입력', group:'플래시상품', mode:'indiv', cols:F.flashDetailI},
+  flash_detail_comma: {label:'상세 · 콤마입력', group:'플래시상품', mode:'comma', cols:F.flashDetailC},
+};
+const GROUP_ORDER = ['일반상품','플래시상품'];
+
+// ── 역할(role) 정의 ──────────────────────────────────────────────────────────
+const ROLE_BY_NAME = {
+  '상품명':'name','라이브가':'price_live','상품가격':'price_base','재고수량':'stock','옵션별재고':'stock',
+  '대표이미지':'image','자체상품코드':'code','카테고리':'category','상품정보고시상품군':'gosi',
+  '옵션1':'opt1','옵션2':'opt2','옵션3':'opt3','옵션종류명':'optkind','추가금액':'addprice',
+  '원산지':'origin','검색태그':'tag',
+};
+const ROLE_SYN = {
+  name:['사이트상품명','라방상품명','상품명','품명','제품명','제목','name','title'],
+  price_live:['라이브가','라방판매가','라방판매단가','라방가','판매가','가격'],
+  price_base:['상품가격','판매가','정가','가격','price'],
+  stock:['잔여재고','가용재고','재고수량','재고','수량','qty','stock'],
+  image:['대표이미지','이미지','썸네일','이미지url','image','img','thumbnail'],
+  code:['자체상품코드','자체코드','품목코드','상품코드','sku','code','바코드'],
+  category:['카테고리','category','분류'],
+  gosi:['상품정보고시상품군','정보고시','상품군'],
+  opt1:['색상명','색상','컬러','color'], opt2:['사이즈','size','치수'], opt3:[],
+  optkind:['옵션종류명','옵션종류'], addprice:['추가금액','옵션추가금'],
+  origin:['원산지','제조국'], tag:['검색태그','태그','키워드'],
+};
+const CORE_ROLES = new Set(['name','price_live','price_base','stock','image','code','category','gosi','opt1','opt2','opt3','optkind','origin','tag']);
+function colMeta(name){
+  const clean=cleanName(name), role=ROLE_BY_NAME[matchKey(clean)]||null;
+  const req=/\(필수\)/.test(name) || role==='category' || role==='gosi';
+  return {name, clean, role, req, core: role!=null && CORE_ROLES.has(role)};
+}
+function tplColumns(key){ return TEMPLATES[key].cols.map(colMeta); }
+function priceRole(key){ return tplColumns(key).some(c=>c.role==='price_live'&&c.req) ? 'price_live' : 'price_base'; }
+function requiredRoles(key){ const s=new Set(); tplColumns(key).forEach(c=>{ if(c.req&&c.role) s.add(c.role); }); return s; }
+
+// ── mock 카테고리 트리 / 상품정보고시 (AI 제외 → 규칙기반 일괄지정) ──────────
+const CAT_TREE=[
+ {grp:'패션의류', items:[['C1001','여성의류 > 티셔츠'],['C1002','여성의류 > 원피스'],['C1003','여성의류 > 바지'],['C1004','여성의류 > 블라우스/셔츠'],['C1005','여성의류 > 니트/스웨터'],['C1006','여성의류 > 자켓/아우터'],['C1007','여성의류 > 상의세트']]},
+ {grp:'패션잡화', items:[['C2001','가방 > 숄더백'],['C2002','가방 > 토트백'],['C2003','주얼리 > 귀걸이'],['C2004','주얼리 > 목걸이/반지'],['C2005','패션소품 > 모자']]},
+];
+const CAT_NONLEAF=[['P100','여성의류 (대분류 · 선택 불가)'],['P200','패션잡화 (대분류 · 선택 불가)']];
+const LEAF_IDS=new Set(), CAT_NAME={};
+CAT_TREE.forEach(g=>g.items.forEach(it=>{LEAF_IDS.add(it[0]);CAT_NAME[it[0]]=it[1];}));
+CAT_NONLEAF.forEach(x=>CAT_NAME[x[0]]=x[1]);
+const NONLEAF_IDS=new Set(CAT_NONLEAF.map(x=>x[0]));
+const GOSI_LIST=['의류','가방','패션잡화/주얼리','신발','기타 재화'];
+const SRC_GUESS=[[/티셔츠|반팔|긴팔|나시|티$/,'C1001'],[/원피스/,'C1002'],[/바지|팬츠|슬랙스|데님|진$/,'C1003'],[/셔츠|남방|블라우스/,'C1004'],[/니트|스웨터|가디건/,'C1005'],[/자켓|아우터|코트|점퍼|패딩/,'C1006'],[/세트/,'C1007'],[/가방|백$/,'C2001'],[/귀걸이/,'C2003'],[/목걸이|반지|주얼리|악세|액세/,'C2004'],[/모자|캡/,'C2005']];
+function guessCat(s){ for(const [re,id] of SRC_GUESS) if(re.test(String(s))) return id; return ''; }
+function catSelectHtml(val){
+  let h=`<option value="">— 선택 —</option>`;
+  CAT_TREE.forEach(g=>{ h+=`<optgroup label="${g.grp}">`+g.items.map(it=>`<option value="${it[0]}"${it[0]===val?' selected':''}>${esc(it[1])}</option>`).join('')+`</optgroup>`; });
+  h+=`<optgroup label="⚠ 대분류(선택 불가 · 검증 실패용)">`+CAT_NONLEAF.map(x=>`<option value="${x[0]}"${x[0]===val?' selected':''}>${esc(x[1])}</option>`).join('')+`</optgroup>`;
+  return h;
+}
+
+function goStep(n){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('p'+n).classList.add('active');
+  document.querySelectorAll('.step').forEach(s=>{
+    const sn=+s.dataset.step; s.classList.toggle('active',sn===n); s.classList.toggle('done',sn<n);
+  });
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function toast(msg){
+  let t=document.getElementById('toast');
+  if(!t){ t=document.createElement('div'); t.id='toast'; t.className='toast'; document.body.appendChild(t); }
+  t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ── STEP1: 템플릿 선택 ───────────────────────────────────────────────────────
+function renderTplPick(){
+  const box=document.getElementById('tplPick'); let h='';
+  GROUP_ORDER.forEach(grp=>{
+    const keys=Object.keys(TEMPLATES).filter(k=>TEMPLATES[k].group===grp);
+    h+=`<div class="tplgroup"><div class="gl">${grp}</div><div class="tplcards">`+
+      keys.map(k=>{ const t=TEMPLATES[k]; const sel=state.template===k?'sel':'';
+        return `<div class="tplcard ${sel}" data-k="${k}"><b>${esc(t.label)}</b>
+          <span>${t.mode==='comma'?'옵션을 콤마로 묶어 입력':'옵션 조합을 행으로 개별 입력'}</span>
+          <div class="cols">컬럼 ${t.cols.length}개</div></div>`;
+      }).join('')+`</div></div>`;
+  });
+  // 사전 카테고리 지정 (앞단) — 임의 엑셀 대량등록 시 전체 상품에 적용할 카테고리/상품군을 미리 선택
+  h+=`<div class="bulkbar" style="margin:4px 0 14px"><div class="bhead">🗂 사전 카테고리 지정 <span style="font-weight:400;color:var(--sub)">(선택 · 임의 엑셀 대량등록 시 전체 상품에 미리 적용)</span></div>
+    <div class="bulkrow"><span class="lab">전체 카테고리</span><select id="presetCat">${catSelectHtml(state.presetCat||'')}</select></div>
+    <div class="bulkrow"><span class="lab">상품정보고시 상품군</span><select id="presetGosi"><option value="">— 선택 —</option>${GOSI_LIST.map(g=>`<option${g===state.presetGosi?' selected':''}>${esc(g)}</option>`).join('')}</select></div>
+    <div class="mapconst">카테고리·상품정보고시는 <b>파일 내 모든 상품에 공통 적용</b>됩니다.</div>
+    <div class="bulkrow" style="margin-top:10px"><label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer"><input type="checkbox" id="presetAutoFill" ${state.autoFillCombos?'checked':''}> <b>옵션 누락 조합 자동 추가</b> <span style="color:var(--sub)">— 입력 안 된 색상·사이즈 조합을 판매 OFF·재고 0으로 채워 함께 등록</span></label></div></div>`;
+  box.innerHTML=h+`<label class="drop" style="display:block;cursor:pointer;margin-top:6px">
+      <input type="file" id="file" accept=".xlsx,.xls,.csv" hidden>
+      <b>셀러 엑셀 파일 선택</b> 또는 이곳에 드래그 &nbsp;<span>(.xlsx / .csv)</span></label>`;
+  box.querySelectorAll('.tplcard').forEach(c=>c.onclick=()=>{
+    box.querySelectorAll('.tplcard').forEach(x=>x.classList.remove('sel'));
+    c.classList.add('sel'); state.template=c.dataset.k;
+  });
+  document.getElementById('presetCat').onchange=e=>{ state.presetCat=e.target.value; };
+  document.getElementById('presetGosi').onchange=e=>{ state.presetGosi=e.target.value; };
+  document.getElementById('presetAutoFill').onchange=e=>{ state.autoFillCombos=e.target.checked; };
+  document.getElementById('file').onchange=onFile;
+}
+
+function uniquify(names){
+  const seen={}, out=[];
+  names.forEach(n=>{ const base=norm(n)||'(빈 컬럼)'; seen[base]=(seen[base]||0)+1;
+    out.push(seen[base]===1?base:`${base} (${seen[base]})`); });
+  return out;
+}
+function detectHeaderRow(grid){
+  const scan=Math.min(grid.length,15); let best=0, bestScore=-1;
+  for(let i=0;i<scan;i++){
+    const cells=(grid[i]||[]).map(norm).filter(Boolean);
+    if(cells.length<2) continue;
+    const textRatio=cells.filter(c=>!/^[\d,.\s₩%\-]+$/.test(c)).length/cells.length;
+    const next=(grid[i+1]||[]).map(norm).filter(Boolean).length;
+    const score=cells.length + textRatio*4 + (next>=cells.length*0.5?3:0);
+    if(score>bestScore){ bestScore=score; best=i; }
+  }
+  return best;
+}
+function scoreHeader(rawNames){ // 데이터 시트 추천: 핵심 역할 매칭 수
+  let s=0; Object.values(ROLE_SYN).forEach(syn=>{
+    if(rawNames.some(n=>{const k=matchKey(n);return syn.some(x=>{const sk=matchKey(x);return sk&&k.includes(sk);});})) s++;
+  }); return s;
+}
+function buildSheetMeta(name){
+  const grid=XLSX.utils.sheet_to_json(workbook.Sheets[name],{header:1,defval:'',blankrows:false});
+  const hr=detectHeaderRow(grid);
+  const rawNames=(grid[hr]||[]).map(norm);
+  const dataRows=grid.slice(hr+1).filter(r=>r.some(c=>norm(c)));
+  const nCols=rawNames.filter(Boolean).length;
+  return {name,grid,hr,rawNames,nRows:dataRows.length,nCols,
+          usable:nCols>=2 && dataRows.length>=1, score:scoreHeader(rawNames)};
+}
+function setData(rawNames, rows, src, note){
+  const uHeader=uniquify(rawNames);
+  state.header=uHeader; state.rawName={};
+  uHeader.forEach((h,i)=>state.rawName[h]=norm(rawNames[i])||'(빈 컬럼)');
+  state.rows=rows;
+  const info=document.getElementById('loadInfo'); info.style.display='block'; info.className='notice';
+  info.innerHTML=`📄 ${esc(src)} — 컬럼 <b>${uHeader.length}개</b> · 데이터 <b>${rows.length.toLocaleString()}행</b> 로드됨`+(note?`<br>${note}`:'');
+  document.getElementById('to2').disabled=false;
+}
+function applySheet(meta, src){
+  const rows=meta.grid.slice(meta.hr+1).filter(r=>r.some(c=>norm(c)))
+    .map(r=>{const o={}; uniquify(meta.rawNames).forEach((h,i)=>o[h]=r[i]??''); return o;});
+  let note = meta.hr>0 ? `ℹ️ <b>${meta.hr+1}행</b>을 제목행으로 인식했습니다.` : '';
+  setData(meta.rawNames, rows, src, note);
+}
+function renderSheetPick(picked, src){
+  const box=document.getElementById('sheetPick');
+  if(sheetMetas.length<=1){ box.style.display='none'; return; }
+  box.style.display='block';
+  box.innerHTML=`<div class="lbl">📑 시트가 ${sheetMetas.length}개입니다. 변환할 시트를 선택하세요.</div><div class="sheetlist">`+
+    sheetMetas.map((m,i)=>{ const dis=!m.usable; const rec=(m===picked)?'<span class="rec">추천</span>':'';
+      const sub=dis?'데이터 없음/요약 시트':`컬럼 ${m.nCols} · ${m.nRows.toLocaleString()}행`;
+      return `<div class="sheetchip ${m===picked?'sel':''} ${dis?'empty':''}" data-i="${i}"><div class="sn">${esc(m.name)}${rec}</div><div class="meta">${sub}</div></div>`;
+    }).join('')+`</div>`;
+  box.querySelectorAll('.sheetchip').forEach(ch=>{ const m=sheetMetas[+ch.dataset.i]; if(!m.usable) return;
+    ch.onclick=()=>{ box.querySelectorAll('.sheetchip').forEach(x=>x.classList.remove('sel')); ch.classList.add('sel'); applySheet(m, `${src} › ${m.name}`); };
+  });
+}
+
+// ── 클릭메이트 자동 호환 인식 ────────────────────────────────────────────────
+function findHeaderByPrefix(...prefixes){
+  for(const p of prefixes){ const k=matchKey(p);
+    const h=state.header.find(h=>matchKey(state.rawName[h]).startsWith(k)); if(h) return h; }
+  return null;
+}
+function detectClickMate(rawNames){
+  if(!rawNames.some(n=>/클릭메이트/.test(n))) return null;
+  const comma = !rawNames.some(n=>/사용하지\s*마세요/.test(n));
+  return { variant: comma?'comma':'indiv' };
+}
+function applyClickMate(cm){
+  // 무조건 호환: 클릭메이트 양식 → 그립 플래시 간편 템플릿 + 고정 매핑 자동 적용
+  state.template = cm.variant==='comma' ? 'flash_simple_comma' : 'flash_simple_indiv';
+  const pm={};
+  const m=(role,...p)=>{ const h=findHeaderByPrefix(...p); if(h) pm[role]=h; };
+  m('name','상품명'); m('price_live','가격'); m('stock','재고'); m('opt1','색상'); m('opt2','사이즈');
+  state.pendingMap=pm;
+  state.clickmate=cm;
+  state.profileNote=null;
+  // 클릭메이트 헤더가 지저분('색상 콤마로 구분')하므로 종류명은 직접입력 모드로 깔끔하게 고정
+  state.optKind={mode:'manual', manual:{opt1:'색상', opt2:'사이즈'}, col:''};
+}
+
+function onFile(e){
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      workbook=XLSX.read(ev.target.result,{type:'array'});
+      sheetMetas=workbook.SheetNames.map(buildSheetMeta);
+      const usable=sheetMetas.filter(m=>m.usable);
+      if(!usable.length){ alert('상품 데이터를 찾을 수 없습니다. (모든 시트가 비어있거나 요약 시트입니다)'); return; }
+      const picked=[...usable].sort((a,b)=> b.score-a.score || b.nRows-a.nRows)[0];
+      renderSheetPick(picked, f.name);
+      applySheet(picked, sheetMetas.length>1 ? `${f.name} › ${picked.name}` : f.name);
+      // 클릭메이트 자동 인식 → 호환 매핑, 아니면 저장된 프로파일 매칭
+      state.clickmate=null; state.pendingMap=null; state.profileNote=null; state.optKind={mode:'header',manual:{},col:''};
+      const cm=detectClickMate(picked.rawNames);
+      if(cm){ applyClickMate(cm);
+        const info=document.getElementById('loadInfo');
+        info.className='notice'; info.style.background='#eefaf0'; info.style.borderColor='#c7ecd0'; info.style.color='#15803d';
+        info.innerHTML=`✅ <b>클릭메이트 양식(${cm.variant==='comma'?'콤마':'개별'})</b>으로 자동 인식했습니다. 그립 <b>플래시 간편</b> 템플릿으로 매핑 없이 호환 등록됩니다.`;
+        renderTplPick();
+      } else {
+        const pm=matchProfile(picked.rawNames);
+        if(pm){ state.pendingMap=pm.map; state.profileNote=`💾 저장된 매핑 프로파일 <b>“${esc(pm.name)}”</b>을(를) 불러왔습니다. (신뢰도 ${Math.round(pm.score*100)}%)`; }
+      }
+    }catch(err){ alert('파일을 읽을 수 없습니다: '+err.message); }
+  };
+  r.readAsArrayBuffer(f);
+}
+document.getElementById('useSample').onclick=()=>{
+  workbook=null; sheetMetas=[]; state.clickmate=null; state.pendingMap=null; state.profileNote=null; state.optKind={mode:'header',manual:{},col:''};
+  document.getElementById('sheetPick').style.display='none';
+  setData(window.SAMPLE_HEADER, window.SAMPLE_ROWS, '셀러_상품 리스트.xlsx (샘플)','');
+  const pm=matchProfile(window.SAMPLE_HEADER);
+  if(pm){ state.pendingMap=pm.map; state.profileNote=`💾 저장된 매핑 프로파일 “${esc(pm.name)}”을(를) 불러왔습니다. (신뢰도 ${Math.round(pm.score*100)}%)`; }
+};
+document.getElementById('to2').onclick=()=>{ buildMapping(); goStep(2); };
+
+// ── 매핑 프로파일 (localStorage) ─────────────────────────────────────────────
+const PROFILE_KEY='grip_excel_map_profiles_v1';
+function loadProfiles(){ try{ return JSON.parse(localStorage.getItem(PROFILE_KEY))||[]; }catch(e){ return []; } }
+function saveProfiles(a){ try{ localStorage.setItem(PROFILE_KEY, JSON.stringify(a)); }catch(e){} }
+function headerSig(rawNames){ return [...new Set(rawNames.map(matchKey).filter(Boolean))].sort().join('|'); }
+function matchProfile(rawNames){
+  const sig=new Set(headerSig(rawNames).split('|').filter(Boolean));
+  let best=null,bestScore=0;
+  loadProfiles().forEach(p=>{ const ps=(p.sig||'').split('|').filter(Boolean);
+    const inter=ps.filter(x=>sig.has(x)).length; const score=ps.length? inter/ps.length : 0;
+    if(score>bestScore){ bestScore=score; best=p; } });
+  if(best && bestScore>=0.6){
+    // 프로파일에 저장된 role→rawName 을 현재 헤더 라벨로 해석
+    const map={};
+    Object.entries(best.map||{}).forEach(([role,raw])=>{
+      const label=state.header.find(h=>matchKey(state.rawName[h])===matchKey(raw)); if(label) map[role]=label; });
+    return {name:best.name, score:bestScore, map};
+  }
+  return null;
+}
+document.getElementById('saveProf').onclick=()=>{
+  readMapping();
+  const name=prompt('매핑 프로파일 이름을 입력하세요 (예: 우리쇼핑몰 표준양식)', '내 양식 '+(loadProfiles().length+1));
+  if(!name) return;
+  const mapByRaw={}; Object.entries(state.roleMap).forEach(([role,label])=>{ mapByRaw[role]=state.rawName[label]; });
+  const profiles=loadProfiles().filter(p=>p.name!==name);
+  profiles.push({name, sig:headerSig(Object.values(state.rawName)), map:mapByRaw, template:state.template});
+  saveProfiles(profiles);
+  toast(`프로파일 “${name}” 저장됨 — 다음에 같은 양식을 올리면 자동 매핑됩니다.`);
+};
+
+// ── STEP2: 템플릿 주도 매핑 ──────────────────────────────────────────────────
+function autoMatch(cols){
+  const used=new Set(), pick={};
+  cols.forEach(col=>{
+    const syn=(col.role&&ROLE_SYN[col.role])?ROLE_SYN[col.role]:[col.clean];
+    let best=null,bestScore=0;
+    state.header.forEach(label=>{ if(used.has(label))return; const c=matchKey(state.rawName[label]); let sc=0;
+      syn.forEach((s,si)=>{ const k=matchKey(s); if(!k)return; let v=0;
+        if(c===k)v=100; else if(c.startsWith(k))v=60; else if(c.includes(k))v=30; if(v)v-=si; sc=Math.max(sc,v); });
+      if(sc>bestScore){ bestScore=sc; best=label; } });
+    if(best && bestScore>=30){ pick[col.name]=best; used.add(best); }
+  });
+  return pick;
+}
+function buildMapping(){
+  document.getElementById('tplNameM').textContent=`${TEMPLATES[state.template].group} ${TEMPLATES[state.template].label} 템플릿`;
+  // 카테고리·상품정보고시(1단계 사전지정)·옵션종류명(아래 전용 컨트롤)은 매핑 타깃에서 제외
+  const cols=tplColumns(state.template).filter(c=>!['category','gosi','optkind'].includes(c.role));
+  const auto=autoMatch(cols);
+  // pendingMap(클릭메이트/프로파일): role→label → 해당 role의 템플릿 컬럼에 우선 적용
+  const pend={};
+  if(state.pendingMap){ cols.forEach(col=>{ if(col.role && state.pendingMap[col.role] && !pend[col.role]){ pend[col.name]=state.pendingMap[col.role]; pend[col.role]=1; } }); }
+  const tb=document.querySelector('#mapTable tbody'); tb.innerHTML='';
+  const optsHtml='<option value="">— 사용 안 함 —</option>'+state.header.map(h=>`<option value="${esc(h)}">${esc(h)}</option>`).join('');
+  const OPTV={opt1:'옵션1 값 컬럼',opt2:'옵션2 값 컬럼',opt3:'옵션3 값 컬럼'};
+  let extraCount=0;
+  cols.forEach(col=>{
+    const badge = col.req?'<span class="pill req">필수</span>':(col.role?'<span class="pill axis">권장</span>':'<span class="pill opt">선택</span>');
+    const roletag = col.role?`<span class="roletag">${col.role}</span>`:'';
+    const disp = OPTV[col.role] || col.clean;
+    const isOpt = ['opt1','opt2','opt3'].includes(col.role);
+    const tr=document.createElement('tr');
+    if(!col.core){ tr.className='extra-row'; extraCount++; }
+    if(isOpt) tr.classList.add('optvalrow');
+    tr.innerHTML=`<td><b>${esc(disp)}</b> ${badge}${roletag}</td>
+      <td><select class="mapsel" data-name="${esc(col.name)}">${optsHtml}</select></td>
+      <td class="samplecol ex" data-name="${esc(col.name)}"></td>`;
+    tb.appendChild(tr);
+    const s=tr.querySelector('select'); s.value=(pend[col.name]||auto[col.name]||'');
+    s.onchange=()=>{ updateExample(col.name); refreshReq(); if(isOpt) renderOptKind(); };
+    updateExample(col.name);
+  });
+  // 클릭메이트 / 프로파일 배너
+  const cmB=document.getElementById('cmBanner'), pfB=document.getElementById('profBanner');
+  if(state.clickmate){ cmB.style.display='block'; cmB.className='notice'; cmB.style.background='#eefaf0'; cmB.style.borderColor='#c7ecd0'; cmB.style.color='#15803d';
+    cmB.innerHTML=`✅ <b>클릭메이트 양식 자동 호환</b> — 상품명·가격·재고·색상·사이즈를 자동 매핑했습니다. 그대로 진행하면 됩니다.`; }
+  else cmB.style.display='none';
+  if(state.profileNote){ pfB.style.display='block'; pfB.className='notice'; pfB.innerHTML=state.profileNote; } else pfB.style.display='none';
+  // 기타(고시/부가 항목) 접기 토글
+  const tg=document.getElementById('extraToggle');
+  tg.innerHTML = extraCount? `<button class="extrabtn" id="extraBtn">＋ 기타 항목 ${extraCount}개 펼치기 (고시·부가정보)</button>`:'';
+  if(extraCount){ document.getElementById('extraBtn').onclick=()=>{
+    const rows=document.querySelectorAll('#mapTable tr.extra-row'); const showing=rows[0].classList.contains('show');
+    rows.forEach(r=>r.classList.toggle('show',!showing));
+    document.getElementById('extraBtn').textContent = showing? `＋ 기타 항목 ${extraCount}개 펼치기 (고시·부가정보)` : `－ 기타 항목 접기`;
+  }; }
+  refreshReq();
+  renderOptKind();
+}
+// 현재 매핑된 옵션 값 컬럼(opt1/2/3 → 셀러 라벨) 슬롯
+function activeOptSlots(){
+  const cols=tplColumns(state.template), byName={}; cols.forEach(c=>byName[c.name]=c);
+  const slots=[];
+  document.querySelectorAll('#mapTable select.mapsel').forEach(s=>{
+    const col=byName[s.dataset.name];
+    if(col && ['opt1','opt2','opt3'].includes(col.role) && s.value) slots.push({role:col.role, label:s.value});
+  });
+  return slots.sort((a,b)=>a.role.localeCompare(b.role));
+}
+// 옵션 종류명 소스 — 매핑 테이블 안의 행으로 렌더(모드 선택 시 상세행 토글)
+function okPrevText(){
+  const OK=state.optKind, m=OK.mode||'header', slots=activeOptSlots();
+  if(m==='column') return OK.col? `셀러 컬럼 “${state.rawName[OK.col]}” 의 값` : '셀러 컬럼 미선택';
+  return slots.map(s=> m==='manual'?((OK.manual&&OK.manual[s.role])||state.rawName[s.label]):state.rawName[s.label]).join(', ');
+}
+function updateOkPrev(){ const el=document.querySelector('#mapTable .okprev'); if(el) el.textContent=okPrevText(); }
+function renderOptKind(){
+  document.querySelectorAll('#mapTable tr.okrow').forEach(r=>r.remove());
+  const slots=activeOptSlots();
+  if(!slots.length) return; // 옵션 값 컬럼 매핑이 없으면 종류명 불필요
+  const OK=state.optKind, m=OK.mode||'header';
+  const modeSel=`<select id="okModeSel">
+     <option value="header"${m==='header'?' selected':''}>옵션 컬럼 제목 자동 사용</option>
+     <option value="manual"${m==='manual'?' selected':''}>직접 입력</option>
+     <option value="column"${m==='column'?' selected':''}>셀러 컬럼에서 가져오기</option></select>`;
+  const main=document.createElement('tr'); main.className='okrow';
+  main.innerHTML=`<td><b>옵션 종류명</b> <span class="pill axis">옵션</span></td>
+    <td>${modeSel}</td>
+    <td class="samplecol">→ <span class="okprev">${esc(okPrevText())}</span></td>`;
+  let detail=null;
+  if(m==='manual'){
+    detail=document.createElement('tr'); detail.className='okrow okdetail';
+    detail.innerHTML=`<td class="okmuted">↳ 옵션별 종류명</td><td colspan="2"><div class="manualrow">`+
+      slots.map(s=>{ const v=(OK.manual&&OK.manual[s.role]!=null&&OK.manual[s.role]!=='')?OK.manual[s.role]:state.rawName[s.label];
+        return `<span class="mi">${s.role.replace('opt','옵션')} <input data-okm="${s.role}" value="${esc(v)}"></span>`; }).join('')+`</div></td>`;
+  } else if(m==='column'){
+    detail=document.createElement('tr'); detail.className='okrow okdetail';
+    const colOpts='<option value="">— 컬럼 선택 —</option>'+state.header.map(h=>`<option value="${esc(h)}"${OK.col===h?' selected':''}>${esc(h)}</option>`).join('');
+    detail.innerHTML=`<td class="okmuted">↳ 종류명 컬럼</td><td colspan="2"><select id="okColSel">${colOpts}</select><span class="oksub">그 컬럼의 값(예: “색상, 사이즈”)을 종류명으로 사용</span></td>`;
+  }
+  const optRows=document.querySelectorAll('#mapTable tr.optvalrow');
+  const tb=document.querySelector('#mapTable tbody');
+  if(optRows.length){ optRows[optRows.length-1].after(main); if(detail) main.after(detail); }
+  else { tb.appendChild(main); if(detail) tb.appendChild(detail); }
+  document.getElementById('okModeSel').onchange=e=>{ state.optKind.mode=e.target.value; renderOptKind(); };
+  document.querySelectorAll('#mapTable input[data-okm]').forEach(i=>i.oninput=()=>{ state.optKind.manual=state.optKind.manual||{}; state.optKind.manual[i.dataset.okm]=i.value; updateOkPrev(); });
+  const cs=document.getElementById('okColSel'); if(cs) cs.onchange=()=>{ state.optKind.col=cs.value; updateOkPrev(); };
+}
+function updateExample(name){
+  const s=document.querySelector(`#mapTable select[data-name="${cssEsc(name)}"]`);
+  const ex=document.querySelector(`#mapTable .ex[data-name="${cssEsc(name)}"]`);
+  if(!s||!ex) return;
+  const col=s.value;
+  if(!col){ ex.innerHTML='<span class="muted">미매핑 → 검증 단계에서 채울 수 있음</span>'; return; }
+  const v=(state.rows.find(r=>norm(r[col]))||{})[col]||'';
+  ex.innerHTML=esc(norm(v))||'<span class="muted">(빈 값)</span>';
+}
+const cssEsc = s => String(s).replace(/(["\\\]\[])/g,'\\$1');
+function readMapping(){
+  state.mapping={}; state.roleMap={};
+  const cols=tplColumns(state.template), byName={}; cols.forEach(c=>byName[c.name]=c);
+  document.querySelectorAll('#mapTable select.mapsel').forEach(s=>{
+    const name=s.dataset.name, label=s.value; if(!label) return;
+    state.mapping[name]=label;
+    const col=byName[name]; if(col && col.role && !state.roleMap[col.role]) state.roleMap[col.role]=label;
+  });
+}
+function refreshReq(){
+  readMapping();
+  const pr=priceRole(state.template);
+  const labels={name:'상품명', price_live:'라이브가', price_base:'상품 가격'};
+  const need=['name',pr].filter(r=>!state.roleMap[r]).map(r=>labels[r]);
+  const reqRoles=[...requiredRoles(state.template)];
+  const otherMissing=reqRoles.filter(r=>!['name',pr,'category','gosi'].includes(r)&&!state.roleMap[r])
+    .map(r=>({origin:'원산지',tag:'검색 태그',stock:'재고수량'}[r]||r));
+  const info=document.getElementById('reqInfo'), to3=document.getElementById('to3');
+  if(need.length){
+    info.className='notice warn';
+    info.innerHTML=`⚠️ 최소 필수 항목을 매핑해 주세요: <b>${need.join(', ')}</b>`;
+    to3.disabled=true;
+  }else{
+    info.className='notice';
+    info.innerHTML=`✅ 핵심 매핑 완료.`+(otherMissing.length?` 미매핑 필수항목 <b>${otherMissing.join(', ')}</b>은(는) 다음 <b>검증 &amp; 수정</b> 단계에서 일괄로 채울 수 있습니다.`:'');
+    to3.disabled=false;
+  }
+}
+document.getElementById('back1').onclick=()=>goStep(1);
+document.getElementById('to3').onclick=()=>{ convert(); renderStep3(); goStep(3); };
+
+// ── STEP3 변환 엔진 (역할 기반 → 상품 단위 리치 객체) ───────────────────────
+function findCol(...names){
+  for(const n of names){ const k=matchKey(n);
+    const h=state.header.find(h=>matchKey(state.rawName[h]).includes(k)); if(h) return h; }
+  return null;
+}
+function convert(){
+  readMapping();
+  const R=state.roleMap, pr=priceRole(state.template);
+  const get=(row,role)=> R[role]!=null ? norm(row[R[role]]) : '';
+  const optRoles=['opt1','opt2','opt3'].filter(r=>R[r]);
+  const srcTypeLabel=findCol('상품종류','상품 구분','종류');
+  const groups=new Map(), rowNos=new Map();
+  state.rows.forEach((row,i)=>{
+    const raw=get(row,'name'); if(!raw) return;
+    const nm=stripEmoji(raw);
+    if(!groups.has(nm)){ groups.set(nm,[]); rowNos.set(nm,[]); }
+    groups.get(nm).push(row); rowNos.get(nm).push(i+2);
+  });
+  const products=[]; let outCombos=0, autoOff=0, over=0, id=0;
+  const OK=state.optKind||{mode:'header'};
+  const optkindOf=(slots,rows)=>{
+    if(OK.mode==='column' && OK.col) return norm((rows.find(r=>norm(r[OK.col]))||{})[OK.col]||'');
+    return slots.map(s=> OK.mode==='manual' ? ((OK.manual&&OK.manual[s.role])||state.rawName[s.col]) : state.rawName[s.col]).join(', ');
+  };
+  for(const [nm,rows] of groups){
+    const slots=optRoles.map(r=>({role:r,col:R[r]})).filter(s=>rows.some(rr=>norm(rr[s.col])));
+    const optkind=optkindOf(slots,rows);
+    const findV=role=>get(rows.find(r=>get(r,role))||{}, role);
+    const price=findV(pr);
+    let combos;
+    if(!slots.length){ combos=[{o:['','',''], stock:get(rows[0],'stock'), sale:'on'}]; }
+    else{
+      const present=new Map();
+      rows.forEach(r=>{ const key=slots.map(s=>norm(r[s.col])); if(key.includes(''))return; present.set(key.join('|'),{stock:get(r,'stock')}); });
+      if(state.autoFillCombos){ // 누락 조합 자동 추가(데카르트곱) → 없는 조합은 OFF·재고0
+        const axisVals=slots.map(s=>{ const seen=new Map(); rows.forEach(r=>{const v=norm(r[s.col]); if(v) seen.set(v,1);}); return [...seen.keys()]; });
+        let full=[[]]; axisVals.forEach(vals=>{const nx=[];full.forEach(c=>vals.forEach(v=>nx.push([...c,v])));full=nx;});
+        if(full.length>2000){ over++; full=[...present.keys()].map(k=>k.split('|')); }
+        combos=full.map(c=>{ const k=c.join('|'), hit=present.get(k), o=[c[0]||'',c[1]||'',c[2]||''];
+          if(hit) return {o,stock:hit.stock,sale:'on'}; autoOff++; return {o,stock:'0',sale:'off'}; });
+      } else { // 입력된 조합만 등록
+        combos=[...present.entries()].map(([k,v])=>{ const c=k.split('|'); return {o:[c[0]||'',c[1]||'',c[2]||''], stock:v.stock, sale:'on'}; });
+      }
+    }
+    outCombos+=combos.length;
+    const ns=rowNos.get(nm);
+    const range=ns.length?(Math.min(...ns)===Math.max(...ns)?`${ns[0]}행`:`${Math.min(...ns)}~${Math.max(...ns)}행`):'';
+    products.push({ id:id++, nm, 상품명:nm, 가격:price, 카테고리:state.presetCat||'', 고시:state.presetGosi||'',
+      대표이미지:findV('image'), 원산지:findV('origin'), 검색태그:findV('tag'), 자체코드:findV('code'),
+      상품종류: srcTypeLabel? norm((rows.find(r=>norm(r[srcTypeLabel]))||{})[srcTypeLabel]||''):'',
+      optkind, combos, 조합수:combos.length, range, errors:{}, hasError:false, hasWarn:false });
+  }
+  state.converted={ products, total:products.length, outCombos, autoOff, over,
+    hasSrcType:!!srcTypeLabel, ctx:{pr, reqRoles:requiredRoles(state.template), template:state.template} };
+  validateAll(); state.gridPage=0;
+}
+
+// ── 사전 검증 엔진 ───────────────────────────────────────────────────────────
+const MAX_NAME=100, MIN_PRICE=200;
+function validateProduct(p){
+  const req=state.converted.ctx.reqRoles, E={};
+  const add=(f,sev,msg)=>{ E[f]={sev,msg}; };
+  if(!p.상품명) add('상품명','error','상품명은 필수입니다.');
+  else if([...p.상품명].length>MAX_NAME) add('상품명','error',`상품명이 너무 깁니다(최대 ${MAX_NAME}자).`);
+  else if(stripEmoji(p.상품명)!==p.상품명) add('상품명','warn','이모지·특수기호가 포함되어 있습니다.');
+  // 가격: 0 또는 200원 이상만 등록 가능 (1~199원 불가). 빈 값은 '빈 가격→0' 자동교정 또는 직접 입력 필요.
+  if(p.가격==='') add('가격','error','가격이 비어 있습니다. (자동 교정에서 0으로 채우거나 값을 입력하세요)');
+  else if(!isNumLike(p.가격)) add('가격','warn','숫자 형식이 아닙니다(₩·콤마·원 포함).');
+  else { const n=toNumber(p.가격);
+    if(n<0 || (n>0 && n<MIN_PRICE)) add('가격','error',`가격은 0 또는 ${MIN_PRICE}원 이상이어야 합니다. (1~${MIN_PRICE-1}원 불가)`); }
+  if(req.has('origin') && !p.원산지) add('원산지','error','원산지는 필수입니다.');
+  if(req.has('tag') && !p.검색태그) add('검색태그','error','검색 태그는 필수입니다.');
+  if(p.대표이미지 && !/^https?:\/\//.test(p.대표이미지)) add('대표이미지','warn','이미지 URL은 http(s):// 로 시작해야 합니다.');
+  p.errors=E;
+  p.hasError=Object.values(E).some(e=>e.sev==='error');
+  p.hasWarn=Object.values(E).some(e=>e.sev==='warn');
+}
+function validateAll(){ state.converted.products.forEach(validateProduct); }
+
+// ── STEP3 렌더 ───────────────────────────────────────────────────────────────
+const PAGE=50;
+function gridFields(){
+  // 카테고리·상품정보고시는 파일 전체 공통값(1단계 지정)이므로 상품별 표시하지 않음
+  const has=role=>tplColumns(state.template).some(c=>c.role===role);
+  const f=[{k:'상품명',t:'text',label:'상품명'},{k:'가격',t:'num',label:'가격'}];
+  if(has('origin')) f.push({k:'원산지',t:'text',label:'원산지'});
+  if(has('tag')) f.push({k:'검색태그',t:'text',label:'검색태그'});
+  f.push({k:'대표이미지',t:'text',label:'대표이미지'});
+  return f;
+}
+function comboStock(p){ const tot=p.combos.reduce((a,b)=>a+(toNumber(b.stock)||0),0);
+  return p.조합수>1?`합 ${tot.toLocaleString()}`:(p.combos[0]?(norm(p.combos[0].stock)||'0'):'0'); }
+function renderStep3(){
+  document.getElementById('onlyErr').checked = state.converted.products.some(p=>p.hasError);
+  renderBulk(); refreshCounts(); renderGrid();
+}
+function refreshCounts(){
+  const c=state.converted, req=c.ctx.reqRoles;
+  const fail=c.products.filter(p=>p.hasError).length;
+  const warn=c.products.filter(p=>!p.hasError&&p.hasWarn).length;
+  const ok=c.total-fail;
+  const batchMiss=[];
+  if(req.has('category')&&!state.presetCat) batchMiss.push('카테고리');
+  if(req.has('gosi')&&!state.presetGosi) batchMiss.push('상품정보고시');
+  const vh=document.getElementById('vhero');
+  if(batchMiss.length)
+    vh.innerHTML=`<div class="vhero bad"><div class="big">!</div><div class="vtxt"><b>${batchMiss.join('·')}가 지정되지 않았습니다.</b><div class="sub">카테고리·상품정보고시는 파일 전체 공통값입니다. 아래 <b>배치 공통값</b>에서 지정하면 등록할 수 있어요.</div></div></div>`;
+  else vh.innerHTML = fail
+    ? `<div class="vhero bad"><div class="big">${fail.toLocaleString()}</div><div class="vtxt"><b>지금 등록하면 ${fail.toLocaleString()}개 상품이 실패합니다.</b><div class="sub">아래에서 고치면 등록 전에 실패를 0으로 만들 수 있어요. (등록 후 이메일·3일 대기 불필요)</div></div></div>`
+    : `<div class="vhero good"><div class="big">0</div><div class="vtxt"><b>모든 상품이 검증을 통과했습니다 ✓</b><div class="sub">${ok.toLocaleString()}개 상품 등록 준비 완료${warn?` · 주의 ${warn}건(등록 가능)`:''}</div></div></div>`;
+  document.getElementById('statCards').innerHTML=`
+    <div class="stat"><div class="k">상품 수</div><div class="v">${c.total.toLocaleString()}</div></div>
+    <div class="stat"><div class="k">등록 대상 옵션 조합</div><div class="v">${c.outCombos.toLocaleString()}</div></div>
+    <div class="stat off"><div class="k">누락 조합 자동 추가(OFF)</div><div class="v">${c.autoOff.toLocaleString()}</div></div>
+    <div class="stat ${fail?'warn':''}"><div class="k">검증 실패 상품</div><div class="v">${fail.toLocaleString()}</div></div>`;
+  document.getElementById('gridCnt').innerHTML=`전체 <b>${c.total.toLocaleString()}</b> · 오류 <b>${fail.toLocaleString()}</b> · 주의 <b>${warn.toLocaleString()}</b>`;
+  const to4=document.getElementById('to4');
+  if(batchMiss.length){ to4.disabled=true; to4.textContent=`${batchMiss.join('·')} 지정 필요`; }
+  else { to4.disabled=false; to4.textContent = fail? `통과한 ${ok.toLocaleString()}건만 등록 →` : `${ok.toLocaleString()}건 등록 실행 →`; }
+  renderAutofix();
+}
+function filteredProducts(){ return document.getElementById('onlyErr').checked
+  ? state.converted.products.filter(p=>p.hasError||p.hasWarn) : state.converted.products; }
+function renderGrid(){
+  const c=state.converted, fields=gridFields(), list=filteredProducts();
+  const pages=Math.max(1,Math.ceil(list.length/PAGE));
+  if(state.gridPage>=pages) state.gridPage=0;
+  const slice=list.slice(state.gridPage*PAGE,(state.gridPage+1)*PAGE);
+  document.querySelector('#vgrid thead').innerHTML='<tr><th>상태</th><th>행</th>'+fields.map(f=>`<th>${f.label}</th>`).join('')+'<th>옵션</th><th>재고</th></tr>';
+  document.querySelector('#vgrid tbody').innerHTML=slice.map(p=>{
+    const cells=fields.map(f=>{
+      const err=p.errors[f.k], cls=err?(err.sev==='error'?'err':'warn'):'';
+      const msg=err?`<span class="emsg">${esc(err.msg)}</span>`:'';
+      let inner;
+      if(f.t==='cat') inner=`<select data-id="${p.id}" data-f="${f.k}">${catSelectHtml(p[f.k])}</select>`;
+      else if(f.t==='gosi') inner=`<select data-id="${p.id}" data-f="${f.k}"><option value="">— 선택 —</option>`+GOSI_LIST.map(g=>`<option${g===p[f.k]?' selected':''}>${esc(g)}</option>`).join('')+`</select>`;
+      else inner=`<input data-id="${p.id}" data-f="${f.k}" value="${esc(p[f.k])}">`;
+      return `<td class="${cls}">${inner}${msg}</td>`;
+    }).join('');
+    const opt=p.optkind?`${esc(p.optkind)} · ${p.조합수}조합`:'옵션없음';
+    const st=p.hasError?'<span class="st bad">✗ 오류</span>':(p.hasWarn?'<span class="st" style="color:#92600a">△ 주의</span>':'<span class="st ok">✓ 통과</span>');
+    return `<tr class="${p.hasError?'':'okrow'}"><td>${st}</td><td class="opt">${esc(p.range)}</td>${cells}<td class="opt">${opt}</td><td class="opt">${comboStock(p)}</td></tr>`;
+  }).join('') || `<tr><td colspan="20" style="text-align:center;color:var(--sub);padding:24px">표시할 상품이 없습니다.</td></tr>`;
+  document.querySelectorAll('#vgrid [data-id]').forEach(el=>{
+    el.addEventListener('change',()=>{ const p=c.products.find(x=>x.id==el.dataset.id); if(!p) return;
+      p[el.dataset.f]=norm(el.value); validateProduct(p); refreshCounts(); renderGrid(); });
+  });
+  const pg=document.getElementById('pager');
+  if(pages<=1) pg.innerHTML='';
+  else{ pg.innerHTML=`<button ${state.gridPage<=0?'disabled':''} id="pgPrev">← 이전</button><span>${state.gridPage+1} / ${pages} (${list.length.toLocaleString()}개)</span><button ${state.gridPage>=pages-1?'disabled':''} id="pgNext">다음 →</button>`;
+    const pv=document.getElementById('pgPrev'),nx=document.getElementById('pgNext');
+    if(pv)pv.onclick=()=>{state.gridPage--;renderGrid();}; if(nx)nx.onclick=()=>{state.gridPage++;renderGrid();}; }
+}
+document.getElementById('onlyErr').onchange=()=>{ state.gridPage=0; renderGrid(); };
+document.getElementById('jumpErr').onclick=()=>{
+  const list=filteredProducts();
+  let j=list.findIndex((p,i)=> i>(state._lastErr??-1) && p.hasError);
+  if(j<0) j=list.findIndex(p=>p.hasError);
+  if(j<0){ toast('오류 상품이 없습니다.'); return; }
+  state._lastErr=j; state.gridPage=Math.floor(j/PAGE); renderGrid();
+};
+
+// ── 원클릭 자동 교정 ─────────────────────────────────────────────────────────
+function autofixCounts(){
+  let emoji=0,price=0,zero=0;
+  state.converted.products.forEach(p=>{
+    if(stripEmoji(p.상품명)!==p.상품명) emoji++;
+    if(p.가격!=='' && !isNumLike(p.가격)) price++;
+    if(p.가격==='') zero++;
+  });
+  return {emoji,price,zero};
+}
+function renderAutofix(){
+  const a=autofixCounts(), box=document.getElementById('autofixBox');
+  box.innerHTML=`<div class="autofix"><div class="afhead"><b>⚡ 자동 교정</b>
+    <span class="cnt">기계적 오류를 한 번에 보정합니다</span><button class="btn primary" id="afApply">한 번에 적용</button></div>
+    <div class="aflist">
+      <label><input type="checkbox" class="afopt" value="emoji" checked> 이모지·특수기호 제거 <span class="cnt">${a.emoji}</span></label>
+      <label><input type="checkbox" class="afopt" value="price" checked> 가격 숫자형식 정리(₩·콤마·원) <span class="cnt">${a.price}</span></label>
+      <label><input type="checkbox" class="afopt" value="zero"> 빈 가격 → <b>0원</b>으로 등록 <span class="cnt">${a.zero}</span></label>
+    </div></div>`;
+  document.getElementById('afApply').onclick=applyAutofix;
+}
+function applyAutofix(){
+  const opt={}; document.querySelectorAll('.afopt').forEach(c=>opt[c.value]=c.checked);
+  let n=0;
+  state.converted.products.forEach(p=>{
+    if(opt.emoji){ const v=stripEmoji(p.상품명); if(v!==p.상품명){p.상품명=v;p.nm=v;n++;} }
+    if(opt.price && p.가격!=='' && !isNumLike(p.가격)){ const t=String(p.가격).replace(/[^\d.]/g,''); if(t){p.가격=t;n++;} }
+    if(opt.zero && p.가격===''){ p.가격='0'; n++; }
+  });
+  validateAll(); refreshCounts(); renderGrid();
+  toast(`자동 교정 ${n}건 적용됨`);
+}
+
+// 배치 공통 카테고리/상품정보고시(preset)를 전 상품에 반영
+function applyPreset(){ state.converted.products.forEach(p=>{ p.카테고리=state.presetCat; p.고시=state.presetGosi; }); }
+// ── 배치 공통값 지정 + 미매핑 필수항목 일괄 채우기 ───────────────────────────
+function renderBulk(){
+  const c=state.converted, req=c.ctx.reqRoles, box=document.getElementById('bulkBox');
+  const needCat=req.has('category'), needGosi=req.has('gosi');
+  let h=`<div class="bulkbar"><div class="bhead">📌 배치 공통값 — 파일 내 모든 상품에 동일 적용</div>`;
+  if(needCat) h+=`<div class="bulkrow"><span class="lab">카테고리 <span class="pill req">필수</span></span><select id="batchCat">${catSelectHtml(state.presetCat)}</select></div>`;
+  if(needGosi) h+=`<div class="bulkrow"><span class="lab">상품정보고시 <span class="pill req">필수</span></span><select id="batchGosi"><option value="">— 선택 —</option>${GOSI_LIST.map(g=>`<option${g===state.presetGosi?' selected':''}>${esc(g)}</option>`).join('')}</select></div>`;
+  if(req.has('origin'))
+    h+=`<div class="bulkrow"><span class="lab">전체 원산지</span><input id="bulkOrigin" placeholder="예: 국내산" style="padding:6px 9px;border:1px solid var(--line);border-radius:8px"><button class="btn ghost" id="bulkOriginBtn" style="padding:6px 12px;font-size:12px">전체 적용</button></div>`;
+  box.innerHTML=h+`</div>`;
+  const bc=document.getElementById('batchCat'); if(bc) bc.onchange=()=>{ state.presetCat=bc.value; applyPreset(); refreshCounts(); toast('카테고리(공통) 적용됨'); };
+  const bg=document.getElementById('batchGosi'); if(bg) bg.onchange=()=>{ state.presetGosi=bg.value; applyPreset(); refreshCounts(); toast('상품정보고시(공통) 적용됨'); };
+  const ob=document.getElementById('bulkOriginBtn'); if(ob) ob.onclick=()=>{ const v=norm(document.getElementById('bulkOrigin').value); if(!v)return; c.products.forEach(p=>p.원산지=v); validateAll(); refreshCounts(); renderGrid(); toast('전체 원산지 적용됨'); };
+}
+
+document.getElementById('back2').onclick=()=>goStep(2);
+document.getElementById('to4').onclick=()=>{ goStep(4); runRegister(); };
+
+// ── 변환 템플릿 다운로드 (선택 템플릿 양식 · 개별/콤마) ──────────────────────
+function buildOutputAoa(products){
+  const tpl=TEMPLATES[state.template], cols=tplColumns(state.template);
+  const aoa=[cols.map(c=>c.name)];
+  const val=(p,combo,role,first)=>{ switch(role){
+    case 'name': return p.상품명;
+    case 'price_live': case 'price_base': return first?p.가격:'';
+    case 'category': return first?p.카테고리:'';
+    case 'gosi': return first?p.고시:'';
+    case 'image': return first?p.대표이미지:'';
+    case 'origin': return first?p.원산지:'';
+    case 'tag': return first?p.검색태그:'';
+    case 'code': return first?p.자체코드:'';
+    case 'optkind': return first?p.optkind:'';
+    case 'opt1': return combo?combo.o[0]:''; case 'opt2': return combo?combo.o[1]:''; case 'opt3': return combo?combo.o[2]:'';
+    case 'stock': return combo?combo.stock:'';
+    default: return ''; } };
+  products.forEach(p=>{
+    if(tpl.mode==='comma'){
+      const j=i=>[...new Set(p.combos.map(c=>c.o[i]).filter(Boolean))].join(', ');
+      const stk=p.optkind? p.combos.map(c=>c.stock).join(', ') : (p.combos[0]?p.combos[0].stock:'');
+      aoa.push(cols.map(c=>{ switch(c.role){ case 'opt1':return j(0); case 'opt2':return j(1); case 'opt3':return j(2); case 'stock':return stk; default:return val(p,null,c.role,true);} }));
+    }else{
+      p.combos.forEach((combo,ci)=>aoa.push(cols.map(c=>val(p,combo,c.role,ci===0))));
+    }
+  });
+  return aoa;
+}
+document.getElementById('download').onclick=()=>{
+  const c=state.converted; if(!c) return;
+  const aoa=buildOutputAoa(c.products);
+  const ws=XLSX.utils.aoa_to_sheet(aoa), wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'변환결과'); XLSX.writeFile(wb,`변환결과_${state.template}.xlsx`);
+};
+
+// ── STEP4: 부분 성공 등록 ────────────────────────────────────────────────────
+function runRegister(){
+  document.getElementById('regRunning').style.display='block';
+  document.getElementById('regDone').style.display='none';
+  const pass=state.converted.products.filter(p=>!p.hasError).length;
+  let p=0; const bar=document.getElementById('bar'), st=document.getElementById('regStatus');
+  const tick=setInterval(()=>{ p+=Math.random()*16+6; if(p>=100)p=100; bar.style.width=p+'%';
+    st.textContent=`통과 상품 등록 중… ${Math.min(pass,Math.round(pass*p/100)).toLocaleString()} / ${pass.toLocaleString()}`;
+    if(p>=100){ clearInterval(tick); document.getElementById('regRunning').style.display='none'; document.getElementById('regDone').style.display='block'; openResult(); }
+  },180);
+}
+function holdProducts(){ return state.converted.products.filter(p=>p.hasError); }
+function openResult(){
+  const c=state.converted, hold=holdProducts(), ok=c.total-hold.length;
+  document.getElementById('mOk').textContent=ok.toLocaleString();
+  document.getElementById('mHold').textContent=hold.length.toLocaleString();
+  document.getElementById('mErrList').innerHTML = hold.length
+    ? hold.slice(0,50).map(p=>{ const e=Object.entries(p.errors).find(([k,v])=>v.sev==='error');
+        return `<div class="erow"><span class="rng">${esc(p.range)} ${esc(p.상품명)}</span><span class="msg">${e?esc(e[1].msg):''}</span></div>`; }).join('')
+      + (hold.length>50?`<div class="erow muted">…외 ${(hold.length-50).toLocaleString()}건</div>`:'')
+    : '<div class="erow"><span class="msg" style="color:var(--ok)">수정 대기 상품이 없습니다. 전부 등록되었습니다.</span></div>';
+  document.getElementById('mFix').style.display = hold.length?'':'none';
+  document.getElementById('overlay').classList.add('show');
+}
+function downloadFailures(){
+  const hold=holdProducts(); if(!hold.length) return;
+  const rows=[['행','상품명','실패 사유']];
+  hold.forEach(p=>Object.entries(p.errors).filter(([k,v])=>v.sev==='error').forEach(([k,v])=>rows.push([p.range,p.상품명,`[${k}] ${v.msg}`])));
+  const ws=XLSX.utils.aoa_to_sheet(rows), wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'수정대기내역'); XLSX.writeFile(wb,'수정대기_내역.xlsx');
+}
+function closeModal(){ document.getElementById('overlay').classList.remove('show'); }
+document.getElementById('mclose').onclick=closeModal;
+document.getElementById('mConfirm').onclick=()=>{ if(document.getElementById('mDlChk').checked) downloadFailures(); closeModal(); };
+document.getElementById('mFix').onclick=()=>{
+  const hold=holdProducts();
+  state.converted.products=hold; state.converted.total=hold.length;
+  state.converted.outCombos=hold.reduce((a,p)=>a+p.조합수,0);
+  closeModal(); renderStep3(); goStep(3); toast(`수정 대기 ${hold.length}건을 검증 화면에 불러왔습니다.`);
+};
+document.getElementById('reopen').onclick=openResult;
+document.getElementById('restart').onclick=()=>{ goStep(1); };
+
+renderTplPick();
+</script>
+</body>
+</html>
