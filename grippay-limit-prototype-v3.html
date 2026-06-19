@@ -1,0 +1,5502 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>그립페이 본인인증 프로토타입</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', sans-serif;
+    background: #1a1a1a;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; padding: 20px;
+  }
+  .phone {
+    width: 375px; height: 760px; background: #000;
+    border-radius: 40px; overflow: hidden; position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+
+  /* Live Background */
+  .live-bg {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(180deg, rgba(10,20,40,0.3) 0%, rgba(20,30,50,0.5) 40%, rgba(15,20,35,0.85) 100%),
+      linear-gradient(180deg, #1e3a5f 0%, #2a4a7a 25%, #3d5d8c 55%, #4a6a9e 100%);
+  }
+  .status-bar {
+    position: relative; z-index: 10; color: white;
+    display: flex; justify-content: space-between;
+    padding: 14px 24px 4px; font-size: 14px; font-weight: 600;
+  }
+
+  /* Live Top */
+  .live-top-row {
+    position: relative; z-index: 5;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 12px 4px;
+  }
+  .streamer-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(0,0,0,0.45);
+    border-radius: 20px;
+    padding: 4px;
+    backdrop-filter: blur(8px);
+  }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, #ffd9a3, #ff9b6b);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: white;
+  }
+  .streamer-info { display: flex; align-items: center; gap: 4px; color: white; }
+  .streamer-name { font-size: 14px; font-weight: 700; }
+  .diamond { font-size: 12px; }
+  .follow-pill {
+    background: #ff3b5c; color: white; border: none;
+    padding: 5px 12px; border-radius: 16px;
+    font-size: 12px; font-weight: 700;
+    margin-left: 4px;
+  }
+  .live-badge-row {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(0,0,0,0.45);
+    border-radius: 16px;
+    padding: 4px 10px 4px 4px;
+    backdrop-filter: blur(8px);
+  }
+  .live-tag {
+    background: #ff3b5c; color: white;
+    font-size: 10px; font-weight: 900;
+    padding: 3px 6px; border-radius: 4px;
+  }
+  .live-timer { color: white; font-size: 13px; font-weight: 700; }
+
+  .live-stats-row {
+    position: relative; z-index: 5;
+    display: flex; align-items: center; gap: 14px;
+    padding: 6px 16px 4px;
+    color: white;
+  }
+  .stat { font-size: 13px; }
+  .stat strong { font-weight: 700; margin-left: 3px; }
+  .live-close-x {
+    margin-left: auto;
+    background: none; border: none; color: white;
+    font-size: 22px; cursor: pointer; padding: 4px;
+  }
+
+  /* Side Cards */
+  .side-cards {
+    position: absolute; right: 10px;
+    top: 42%; transform: translateY(-50%);
+    z-index: 3;
+    display: flex; flex-direction: column; gap: 12px;
+    align-items: center;
+  }
+  .side-card {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    cursor: pointer;
+  }
+  .side-card-icon {
+    width: 48px; height: 48px;
+    background: rgba(60,60,90,0.85);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    position: relative;
+  }
+  .grippay-status-badge {
+    position: absolute;
+    top: -4px; right: -4px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #ff3b5c;
+    color: white;
+    font-size: 11px;
+    font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid #2a2a3c;
+  }
+  .grippay-status-badge.registered {
+    background: #4caf50;
+    font-size: 10px;
+  }
+  .side-card-label {
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+
+  /* GripPay Status Toggle */
+  .grippay-toggle-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    margin-top: -4px;
+  }
+  .grippay-switch {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: block;
+  }
+  .grippay-switch-track {
+    position: absolute;
+    inset: 0;
+    background: #888;
+    border-radius: 12px;
+    transition: background 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  .grippay-switch-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: white;
+    border-radius: 50%;
+    transition: left 0.2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    z-index: 2;
+  }
+  .grippay-switch.active .grippay-switch-track {
+    background: #4caf50;
+  }
+  .grippay-switch.active .grippay-switch-thumb {
+    left: 18px;
+  }
+  .grippay-switch-label {
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.45);
+    padding: 2px 6px;
+    border-radius: 8px;
+    backdrop-filter: blur(6px);
+    cursor: pointer;
+    display: block;
+  }
+
+  /* Chat */
+  .chat-area {
+    position: absolute; bottom: 80px; left: 12px; right: 88px;
+    z-index: 3;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .chat-msg {
+    background: rgba(0,0,0,0.35);
+    border-radius: 18px;
+    padding: 6px 14px;
+    font-size: 13px;
+    color: white;
+    backdrop-filter: blur(6px);
+    align-self: flex-start;
+    max-width: 100%;
+    word-break: break-word;
+  }
+  .chat-msg .nick { font-weight: 700; }
+  .chat-msg .nick.c1 { color: #ff8eb0; }
+  .chat-msg .nick.c2 { color: #6bb3ff; }
+  .chat-msg .nick.c3 { color: #ff9eef; }
+  .chat-msg .nick.c4 { color: #5eddc0; }
+
+  /* Bottom Bar */
+  .live-bottom-bar {
+    position: absolute; bottom: 12px; left: 12px; right: 12px;
+    z-index: 4;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .cart-icon {
+    width: 48px; height: 48px;
+    background: white;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .cart-badge {
+    position: absolute; top: -4px; right: -4px;
+    background: #ff3b5c; color: white;
+    font-size: 10px; font-weight: 700;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .msg-input {
+    flex: 1;
+    background: rgba(20,20,30,0.6);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 24px;
+    padding: 12px 18px;
+    color: rgba(255,255,255,0.55);
+    font-size: 14px;
+    backdrop-filter: blur(8px);
+  }
+  .heart-icon {
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* Layer Popup */
+  .layer-popup {
+    position: absolute; inset: 0; z-index: 100;
+    display: none; align-items: flex-end;
+    background: rgba(0,0,0,0.5);
+    animation: fadeIn 0.25s ease;
+  }
+  .layer-popup.active { display: flex; }
+  .layer-popup.over-order { z-index: 250; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+  .sheet {
+    width: 100%; background: white; border-radius: 20px 20px 0 0;
+    padding: 20px 20px 28px; animation: slideUp 0.3s ease;
+    max-height: 90%; overflow-y: auto;
+    scroll-behavior: smooth;
+  }
+  .sheet-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 4px;
+  }
+  .sheet-title {
+    font-size: 17px; font-weight: 700; color: #111;
+    flex: 1; text-align: center; margin-left: 24px;
+  }
+  .close-btn {
+    background: none; border: none; font-size: 22px; color: #555;
+    cursor: pointer; padding: 4px; width: 24px;
+  }
+  .back-btn {
+    background: none; border: none; font-size: 20px; color: #555;
+    cursor: pointer; padding: 4px; width: 24px;
+  }
+  .sheet-subtitle {
+    text-align: center; color: #888; font-size: 12px; margin-bottom: 20px;
+  }
+  .sheet-header-with-back {
+    display: flex; align-items: center; margin-bottom: 16px; position: relative;
+  }
+  .sheet-header-with-back .sheet-title { margin-left: 0; }
+  .sheet-header-with-back .close-btn,
+  .sheet-header-with-back .back-btn { position: absolute; }
+  .sheet-header-with-back .back-btn { left: 0; }
+  .sheet-header-with-back .close-btn { right: 0; }
+
+  /* CI Status (그립페이 관리 내) */
+  .ci-status-box {
+    background: linear-gradient(135deg, #fff5f7 0%, #fff 100%);
+    border: 1px dashed #ffb3c1;
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 16px;
+  }
+  .ci-status-box.has-ci {
+    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8f3 100%);
+    border-color: #81c995;
+  }
+  .ci-status-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 6px;
+  }
+  .ci-status-label { font-size: 12px; font-weight: 700; color: #555; }
+  .ci-toggle {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #ff3b5c; border: none; border-radius: 14px;
+    padding: 4px 6px 4px 10px; cursor: pointer;
+    transition: background 0.2s; height: 26px;
+  }
+  .ci-toggle.active { background: #4caf50; }
+  .ci-toggle-slider { width: 16px; height: 16px; background: white; border-radius: 50%; }
+  .ci-toggle-text { font-size: 11px; font-weight: 700; color: white; }
+  .ci-status-desc { font-size: 11px; color: #777; line-height: 1.4; }
+  .ci-badge {
+    background: #e8f5e9; color: #2e7d32; border-radius: 8px;
+    padding: 10px 12px; font-size: 12px; font-weight: 600;
+    margin-bottom: 14px; text-align: center;
+  }
+
+  /* Pay items */
+  .pay-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 8px; border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+  }
+  .pay-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; font-size: 20px;
+  }
+  .pay-icon.card { background: linear-gradient(135deg, #ff5e7a, #ff3b5c); }
+  .pay-icon.bank { background: linear-gradient(135deg, #4a90e2, #2563eb); }
+  .pay-text { flex: 1; }
+  .pay-text .main { font-size: 15px; font-weight: 600; color: #111; margin-bottom: 2px; }
+  .pay-text .sub { font-size: 12px; color: #999; }
+  .arrow { color: #ccc; font-size: 18px; }
+
+  /* Verify */
+  .verify-icon-wrap { display: flex; justify-content: center; margin: 20px 0 16px; }
+  .verify-icon {
+    width: 56px; height: 56px; background: #ff3b5c;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  }
+  .verify-icon svg { width: 30px; height: 30px; fill: white; }
+  .verify-title {
+    text-align: center; font-size: 16px; font-weight: 700; color: #111;
+    line-height: 1.5; margin-bottom: 8px;
+  }
+  .verify-title .highlight { color: #ff3b5c; }
+  .verify-desc { text-align: center; font-size: 13px; color: #888; margin-bottom: 20px; }
+  .verify-notes { font-size: 12px; color: #888; line-height: 1.7; margin: 12px 0; }
+  .verify-notes li { list-style: none; position: relative; padding-left: 10px; }
+  .verify-notes li::before { content: '·'; position: absolute; left: 0; }
+
+  .primary-btn {
+    width: 100%; background: #ff3b5c; color: white; border: none;
+    padding: 16px; border-radius: 10px; font-size: 15px; font-weight: 700;
+    cursor: pointer;
+  }
+  .primary-btn:disabled { background: #ccc; }
+
+  /* Terms */
+  .terms-box {
+    border: 1px solid #eee; border-radius: 10px;
+    padding: 14px 16px; background: #fafafa;
+  }
+  .terms-all { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 4px 0; }
+  .term-all-text { font-size: 15px; font-weight: 700; color: #111; }
+  .terms-divider { height: 1px; background: #e8e8e8; margin: 12px 0; }
+  .term-item { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 6px 0; }
+  .term-check {
+    width: 22px; height: 22px; background: #ff3b5c; border-radius: 50%;
+    color: white; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; flex-shrink: 0;
+  }
+  .term-check.small { width: 20px; height: 20px; font-size: 12px; }
+  .term-check.unchecked { background: #ddd; }
+  .term-text { flex: 1; font-size: 13px; color: #333; }
+  .required-tag { color: #ff3b5c; font-weight: 600; }
+  .term-view { font-size: 12px; color: #999; }
+
+  /* PASS / KCP screens */
+  .pass-screen, .kcp-screen {
+    position: absolute; inset: 0; z-index: 200; background: white;
+    display: none; flex-direction: column;
+    animation: slideInRight 0.3s ease;
+  }
+  .pass-screen.active, .kcp-screen.active { display: flex; }
+  .pass-screen.over-order, .kcp-screen.over-order { z-index: 260; }
+  .pass-statusbar, .kcp-statusbar {
+    color: white; padding: 14px 24px 4px;
+    font-size: 14px; font-weight: 600;
+    display: flex; justify-content: space-between;
+  }
+  .pass-statusbar { background: #000; }
+  .kcp-statusbar { background: #1e3a5f; }
+  .kcp-statusbar.white { background: white; color: #111; }
+  .pass-header, .kcp-header {
+    color: white; padding: 8px 16px 14px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .pass-header { background: #000; }
+  .kcp-header { background: #1e3a5f; }
+  .kcp-header.white {
+    background: white; color: #111;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .pass-header-title, .kcp-header-title {
+    flex: 1; text-align: center; font-size: 15px; font-weight: 600;
+  }
+  .pass-close, .kcp-close {
+    background: none; border: none; color: white;
+    font-size: 20px; cursor: pointer; width: 24px;
+  }
+  .kcp-close.dark { color: #111; }
+  .pass-body, .kcp-body {
+    flex: 1; padding: 24px 20px 20px; overflow-y: auto;
+    display: flex; flex-direction: column;
+  }
+  .kcp-body.white { background: white; }
+
+  .pass-logo-row, .kcp-logo-row {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 24px;
+  }
+  .pass-logo {
+    background: #ff3b5c; color: white; font-weight: 900;
+    font-size: 18px; padding: 4px 8px; border-radius: 3px;
+  }
+  .kcp-logo {
+    background: #1e3a5f; color: white; font-weight: 900;
+    font-size: 18px; padding: 4px 10px; border-radius: 3px;
+  }
+  .pass-tagline, .kcp-tagline {
+    font-size: 10px; color: #999; text-align: right; line-height: 1.4;
+  }
+  .pass-question {
+    font-size: 22px; font-weight: 700; color: #111;
+    line-height: 1.4; margin-bottom: 28px;
+  }
+  .carrier-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .carrier-cell {
+    padding: 18px 8px; border: 1px solid #e0e0e0;
+    border-radius: 6px; background: white;
+    font-size: 13px; color: #333; font-weight: 600;
+    cursor: pointer; text-align: center;
+  }
+  .mvno-row {
+    display: flex; justify-content: flex-end; margin-top: 14px;
+    align-items: center; gap: 6px; color: #999; font-size: 12px;
+  }
+  .info-icon {
+    width: 14px; height: 14px; background: #ccc; color: white;
+    border-radius: 50%; display: inline-flex;
+    align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 700;
+  }
+  .method-card {
+    border: 1.5px solid #e0e0e0; border-radius: 10px;
+    padding: 18px 20px; margin-bottom: 12px;
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer;
+  }
+  .method-card.selected { border-color: #ff3b5c; }
+  .method-name { font-size: 16px; font-weight: 700; color: #111; margin-bottom: 4px; }
+  .method-desc { font-size: 12px; color: #888; }
+  .method-icon {
+    width: 36px; height: 36px; border: 1.5px solid #ddd;
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .method-card.selected .method-icon { border-color: #ff3b5c; color: #ff3b5c; }
+  .agreement-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 16px 0; border-top: 1px solid #f0f0f0;
+    margin-top: 16px; cursor: pointer;
+  }
+  .agree-check {
+    width: 22px; height: 22px; background: #ff3b5c; border-radius: 50%;
+    color: white; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; flex-shrink: 0;
+  }
+  .agree-check.unchecked { background: #ddd; }
+  .agree-text { flex: 1; font-size: 14px; color: #333; }
+  .agree-text .required { color: #ff3b5c; font-weight: 600; }
+  .info-input {
+    width: 100%; padding: 14px 16px; background: #f5f5f5;
+    border: none; border-radius: 6px;
+    font-size: 15px; margin-bottom: 10px; outline: none;
+  }
+  .rrn-row {
+    display: flex; align-items: center; gap: 10px;
+    background: #f5f5f5; border-radius: 6px; padding: 14px 16px; margin-bottom: 10px;
+  }
+  .rrn-front { flex: 1; border: none; background: transparent; font-size: 15px; outline: none; }
+  .rrn-back-num {
+    width: 24px; height: 32px; border: 1px solid #ddd;
+    border-radius: 4px; background: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 600;
+  }
+  .rrn-mask { letter-spacing: 4px; color: #999; }
+
+  .code-input-row {
+    display: flex; gap: 8px; align-items: center; margin-bottom: 12px;
+  }
+  .code-input {
+    flex: 1; padding: 14px 16px; border: 1.5px solid #ff3b5c;
+    border-radius: 6px; font-size: 15px; outline: none;
+  }
+  .resend-btn {
+    padding: 0 14px; height: 48px; background: white;
+    border: 1px solid #ddd; border-radius: 6px;
+    font-size: 13px; color: #555; cursor: pointer;
+  }
+  .timer-row {
+    display: flex; justify-content: space-between; align-items: center;
+    color: #ff3b5c; font-size: 13px; margin-bottom: 20px;
+  }
+  .bottom-area { margin-top: auto; padding-top: 20px; }
+  .pass-footer, .kcp-footer {
+    text-align: center; font-size: 10px; color: #aaa;
+    line-height: 1.5; padding-top: 16px;
+  }
+
+  /* KCP Info */
+  .kcp-icon-wrap { display: flex; justify-content: center; margin: 12px 0 20px; }
+  .kcp-icon {
+    width: 72px; height: 72px; background: #1e3a5f; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .kcp-title {
+    text-align: center; font-size: 18px; font-weight: 700; color: #111;
+    line-height: 1.5; margin-bottom: 12px;
+  }
+  .kcp-highlight { color: #1e3a5f; }
+  .kcp-desc { text-align: center; font-size: 13px; color: #777; line-height: 1.6; margin-bottom: 20px; }
+  .kcp-info-box {
+    background: #f5f7fa; border-radius: 10px; padding: 14px 16px; margin-bottom: 20px;
+  }
+  .kcp-info-title { font-size: 13px; font-weight: 700; color: #1e3a5f; margin-bottom: 8px; }
+  .kcp-info-list { font-size: 12px; color: #555; line-height: 1.7; }
+  .kcp-info-list li { list-style: none; position: relative; padding-left: 10px; }
+  .kcp-info-list li::before { content: '·'; position: absolute; left: 0; }
+  .kcp-btn { background: #1e3a5f; }
+  .kcp-form-group { margin-bottom: 16px; }
+  .kcp-label { display: block; font-size: 13px; color: #1e3a5f; font-weight: 600; margin-bottom: 6px; }
+  .kcp-input {
+    width: 100%; padding: 14px 16px; border: 1px solid #d0d0d0;
+    border-radius: 6px; font-size: 15px; outline: none;
+  }
+  .kcp-select {
+    width: 100%; padding: 14px 16px; border: 1px solid #d0d0d0;
+    border-radius: 6px; font-size: 15px; background: white; outline: none;
+  }
+  .kcp-hint { font-size: 11px; color: #999; margin-top: 4px; }
+  .kcp-code-row { display: flex; align-items: center; gap: 8px; }
+  .kcp-code-row .kcp-input { flex: 1; }
+  .kcp-timer { color: #1e3a5f; font-size: 14px; font-weight: 700; min-width: 40px; }
+
+  /* KCP Terms */
+  .kcp-terms-headline {
+    font-size: 22px; font-weight: 700; color: #111; margin-bottom: 8px;
+  }
+  .kcp-terms-sub {
+    font-size: 13px; color: #888; line-height: 1.5; margin-bottom: 28px;
+  }
+  .kcp-terms-all-box {
+    border: 1px solid #e0e0e0; border-radius: 8px;
+    padding: 16px 18px; display: flex; align-items: center; gap: 12px;
+    cursor: pointer; margin-bottom: 8px;
+    background: white;
+  }
+  .kt-check {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: #e0e0e0;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    color: white;
+    font-size: 14px;
+    font-weight: 900;
+  }
+  .kt-check.checked { background: #1e3a5f; }
+  .kt-check.small {
+    width: 20px; height: 20px;
+    background: transparent;
+    color: #c8c8c8;
+  }
+  .kt-check.small.checked {
+    background: transparent;
+    color: #1e3a5f;
+  }
+  .kcp-terms-all-text { font-size: 15px; font-weight: 700; color: #111; }
+  .kcp-terms-list { padding: 8px 4px; }
+  .kcp-terms-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 14px;
+    cursor: pointer;
+  }
+  .kcp-terms-item-text { flex: 1; font-size: 14px; color: #333; }
+  .kcp-terms-view { font-size: 12px; color: #999; text-decoration: underline; }
+  .kcp-terms-bottom {
+    margin: 16px -20px 0;
+  }
+  .kcp-terms-next-btn {
+    width: 100%;
+    background: #d0d0d0;
+    color: white;
+    border: none;
+    padding: 18px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .kcp-terms-next-btn.active { background: #1e3a5f; }
+
+  /* Card Registration */
+  .card-headline { font-size: 22px; font-weight: 700; color: #111; margin-bottom: 8px; }
+  .card-sub { font-size: 13px; color: #999; margin-bottom: 28px; }
+  .card-scan-row { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+  .card-scan-btn {
+    background: white;
+    color: #7b2cf0;
+    border: 1.5px solid #7b2cf0;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .card-form-box {
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .card-row {
+    padding: 12px 14px;
+    border-bottom: 1px solid #e8e8e8;
+    background: white;
+  }
+  .card-row:last-child { border-bottom: none; }
+  .card-row.focused {
+    border: 1.5px solid #7b2cf0;
+    border-radius: 6px;
+    margin: -1px;
+  }
+  .card-label-row { display: flex; justify-content: space-between; align-items: center; }
+  .card-label { font-size: 12px; color: #888; font-weight: 500; }
+  .card-brand {
+    width: 20px; height: 20px;
+    background: #e8453c;
+    color: white;
+    border-radius: 50%;
+    font-size: 9px;
+    font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+    font-style: italic;
+  }
+  .card-num-inputs {
+    display: flex; align-items: center;
+    gap: 2px;
+    margin-top: 6px;
+  }
+  .card-num-input {
+    flex: 1; min-width: 0;
+    border: none;
+    background: transparent;
+    font-size: 17px;
+    font-weight: 700;
+    color: #111;
+    outline: none;
+    text-align: center;
+    padding: 2px 0;
+  }
+  .card-dash {
+    color: #ccc;
+    font-size: 13px;
+  }
+  .card-half-row {
+    display: flex;
+    padding: 0;
+  }
+  .card-half {
+    flex: 1;
+    padding: 12px 14px;
+  }
+  .card-half-divider {
+    border-left: 1px solid #e8e8e8;
+  }
+  .card-expiry {
+    display: flex; align-items: center; gap: 6px;
+    margin-top: 6px;
+  }
+  .card-mini-input {
+    width: 36px;
+    border: none;
+    background: transparent;
+    font-size: 17px;
+    font-weight: 700;
+    color: #111;
+    outline: none;
+    text-align: center;
+  }
+  .card-cvc-input, .card-pw-input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-size: 17px;
+    font-weight: 700;
+    color: #111;
+    outline: none;
+    margin-top: 6px;
+  }
+  .card-next-btn {
+    width: 100%;
+    background: #7b2cf0;
+    color: white;
+    border: none;
+    padding: 16px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 16px;
+  }
+
+  /* Bank Selection */
+  .bank-headline {
+    font-size: 20px; font-weight: 700; color: #111;
+    margin-bottom: 20px;
+  }
+  .bank-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    background: #f3f3f3;
+    border-radius: 12px;
+    padding: 12px 8px;
+  }
+  .bank-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 4px;
+    cursor: pointer;
+    border-radius: 8px;
+    background: white;
+  }
+  .bank-logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .bank-name {
+    font-size: 11px;
+    color: #333;
+    font-weight: 600;
+  }
+  .bank-logo.nh { background: #00a651; }
+  .bank-logo.kakao { background: #ffe600; }
+  .bank-logo.kb { background: #FFB100; }
+  .bank-logo.toss { background: #4880EE; }
+  .bank-logo.shinhan { background: #0046ff; }
+  .bank-logo.woori { background: #0093d6; }
+  .bank-logo.ibk { background: #00529c; }
+  .bank-logo.hana { background: #008c95; }
+  .bank-logo.mg { background: #5cb1e1; }
+  .bank-logo.busan { background: white; border: 1px solid #eee; }
+  .bank-logo.im { background: white; border: 1px solid #eee; }
+  .bank-logo.kbank { background: #1c2c5b; }
+  .bank-logo.shinhyup { background: #00a3e3; }
+  .bank-logo.post { background: #e60012; }
+  .bank-logo.sc { background: white; border: 1px solid #eee; }
+
+  /* Payment Password */
+  .pw-headline {
+    font-size: 20px; font-weight: 700; color: #111;
+    text-align: center; margin-top: 12px; margin-bottom: 6px;
+  }
+  .pw-sub {
+    text-align: center;
+    font-size: 12px; color: #999; margin-bottom: 24px;
+  }
+  .pw-dots {
+    display: flex; justify-content: center; gap: 14px;
+    margin-bottom: 20px;
+  }
+  .pw-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #d0d0d0;
+  }
+  .pw-dot.filled { background: #7b2cf0; }
+  .pw-keypad-wrap {
+    margin-top: auto;
+    background: #ebeef2;
+    padding: 14px 0 18px;
+    margin: 0 -20px -20px;
+  }
+  .pw-keypad-status {
+    text-align: center;
+    color: #7b2cf0;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .pw-keypad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding: 0 8px;
+  }
+  .pw-key {
+    height: 44px;
+    background: transparent;
+    border: none;
+    font-size: 22px;
+    font-weight: 600;
+    color: #111;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .pw-key.action {
+    font-size: 13px;
+    font-weight: 700;
+    color: #555;
+  }
+  .pw-key.submit {
+    background: #7b2cf0;
+    color: white;
+    border-radius: 20px;
+    margin: 4px 8px;
+    font-size: 13px;
+    font-weight: 700;
+    height: 36px;
+  }
+  .pw-key svg {
+    width: 22px; height: 22px;
+    stroke: #555;
+    fill: none;
+    stroke-width: 2;
+  }
+
+  /* Success */
+  .success-icon {
+    width: 72px; height: 72px; background: #4cd964; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 40px auto 24px; color: white; font-size: 36px;
+  }
+  .loading-spinner {
+    width: 32px; height: 32px; border: 3px solid #f0f0f0;
+    border-top-color: #ff3b5c; border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Products Popup */
+  .grab-bar {
+    width: 36px; height: 4px;
+    background: #d0d0d0;
+    border-radius: 2px;
+    margin: 10px auto 0;
+  }
+  .prod-tabs {
+    display: flex;
+    padding: 16px 20px 0;
+    position: relative;
+    background: white;
+  }
+  .prod-tab {
+    flex: 1;
+    background: none; border: none;
+    padding: 12px 0;
+    cursor: pointer;
+    position: relative;
+  }
+  .prod-tab-text {
+    font-size: 16px; font-weight: 600; color: #aaa;
+  }
+  .prod-tab.active .prod-tab-text {
+    color: #ff3b5c;
+    font-weight: 700;
+  }
+  .prod-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: #ff3b5c;
+  }
+  .prod-close {
+    position: absolute;
+    top: 22px; right: 14px;
+    background: none; border: none;
+    font-size: 22px; color: #333;
+    cursor: pointer;
+  }
+  .prod-panel {
+    display: none;
+    padding: 14px 14px 20px;
+    overflow-y: auto;
+    max-height: 480px;
+    background: #f5f7fa;
+  }
+  .prod-panel.active { display: block; }
+  .prod-card {
+    background: white;
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .prod-thumb {
+    width: 70px; height: 70px;
+    background: #e8ecff;
+    border-radius: 12px;
+    position: relative;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .prod-thumb-lightning {
+    position: absolute;
+    top: 8px; left: 8px;
+    width: 22px; height: 22px;
+    background: #6c4fff;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+    font-size: 12px;
+  }
+  .prod-thumb-bag {
+    position: absolute;
+    right: 6px; bottom: 4px;
+    width: 38px; height: 42px;
+    background: #a8b5ff;
+    border-radius: 8px 8px 6px 6px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .prod-thumb-percent {
+    color: white;
+    font-size: 13px;
+    font-weight: 800;
+  }
+  .prod-info { flex: 1; min-width: 0; }
+  .prod-tag {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 4px;
+  }
+  .prod-tag.none { background: #b0b0b0; }
+  .prod-tag.depth1 { background: #2d3a55; }
+  .prod-tag.depth2 { background: #4a8df0; }
+  .prod-tag.depth3 { background: #ff5c5c; }
+  .prod-name {
+    font-size: 15px; font-weight: 600; color: #111;
+    margin-bottom: 2px;
+  }
+  .prod-price {
+    font-size: 17px; font-weight: 800; color: #ff3b5c;
+  }
+  .prod-buy-btn {
+    background: white;
+    color: #ff3b5c;
+    border: 1.5px solid #ff3b5c;
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .empty-cart {
+    text-align: center;
+    padding: 60px 20px;
+  }
+  .empty-cart-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
+  .empty-cart-text { font-size: 15px; font-weight: 600; color: #555; margin-bottom: 6px; }
+  .empty-cart-sub { font-size: 13px; color: #999; }
+
+  /* Cart */
+  .cart-seller {
+    background: white;
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .cart-seller-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f0f0f0;
+    margin-bottom: 10px;
+  }
+  .cart-seller-name { font-size: 14px; font-weight: 700; color: #111; }
+  .cart-seller-name::before { content: '🏪'; margin-right: 6px; }
+  .cart-seller-count { font-size: 12px; color: #888; }
+  .cart-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+  }
+  .cart-item + .cart-item { border-top: 1px solid #f8f8f8; }
+  .cart-item-thumb {
+    width: 56px; height: 56px;
+    background: #e8ecff;
+    border-radius: 10px;
+    position: relative;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .cart-item-thumb .prod-thumb-lightning { top: 4px; left: 4px; width: 18px; height: 18px; font-size: 10px; }
+  .cart-item-thumb .prod-thumb-bag { right: 4px; bottom: 4px; width: 30px; height: 30px; }
+  .cart-item-info { flex: 1; min-width: 0; }
+  .cart-item-name { font-size: 13px; font-weight: 600; color: #111; margin-bottom: 4px; }
+  .cart-item-bottom { display: flex; align-items: center; justify-content: space-between; }
+  .cart-item-price { font-size: 14px; font-weight: 700; color: #111; }
+  .cart-item-qty {
+    font-size: 12px; color: #888;
+    background: #f3f5f8;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  .cart-item-remove {
+    background: none; border: none;
+    color: #ccc;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+  .cart-summary {
+    background: white;
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .cart-summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    font-size: 13px;
+    color: #555;
+  }
+  .cart-summary-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    margin-top: 8px;
+    border-top: 1px solid #f0f0f0;
+  }
+  .cart-summary-total-label { font-size: 14px; font-weight: 700; color: #111; }
+  .cart-summary-total-price { font-size: 18px; font-weight: 800; color: #ff3b5c; }
+  .cart-action-btn {
+    width: 100%;
+    background: #ff3b5c;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  /* Option Popup */
+  .opt-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px 20px 16px;
+    position: relative;
+  }
+  .opt-thumb {
+    width: 70px; height: 80px;
+    background: #e8ecff;
+    border-radius: 10px;
+    position: relative;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .opt-thumb .prod-thumb-lightning { top: 6px; left: 6px; }
+  .opt-thumb .prod-thumb-bag { right: 4px; bottom: 18px; }
+  .opt-last-badge {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: #ff3b5c;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    padding: 3px 0;
+  }
+  .opt-info { flex: 1; min-width: 0; padding-top: 2px; }
+  .opt-name { font-size: 16px; font-weight: 700; color: #111; margin-bottom: 6px; }
+  .opt-price-row { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+  .opt-origin-price { font-size: 14px; color: #b0b0b0; text-decoration: line-through; }
+  .opt-final-price { font-size: 19px; font-weight: 800; color: #111; }
+  .opt-live-tag {
+    background: #ffe2ea;
+    color: #ff3b5c;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 10px;
+  }
+  .opt-close-x {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: none;
+    border: none;
+    font-size: 22px;
+    color: #333;
+    cursor: pointer;
+  }
+  .opt-divider {
+    height: 1px;
+    background: #f0f0f0;
+    margin: 0 20px;
+  }
+  .opt-section { padding: 18px 20px; }
+  .opt-depth-group { margin-bottom: 12px; }
+  .opt-depth-label { font-size: 13px; color: #555; font-weight: 600; margin-bottom: 6px; }
+  .opt-select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    background: white;
+    outline: none;
+  }
+  .opt-qty-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .opt-qty-label { font-size: 15px; font-weight: 700; color: #111; }
+  .opt-qty-stepper {
+    display: flex;
+    align-items: center;
+    background: #f8f8fa;
+    border-radius: 24px;
+    padding: 6px 4px;
+  }
+  .opt-qty-btn {
+    width: 32px; height: 32px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #555;
+    cursor: pointer;
+  }
+  .opt-qty-value {
+    min-width: 50px;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: #111;
+  }
+  .opt-total-section { padding: 16px 20px 20px; }
+  .opt-shipping {
+    text-align: right;
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 8px;
+  }
+  .opt-total-row {
+    display: flex;
+    justify-content: flex-end;
+    align-items: baseline;
+    gap: 14px;
+  }
+  .opt-total-label { font-size: 14px; color: #555; font-weight: 600; }
+  .opt-total-price { font-size: 22px; font-weight: 800; color: #111; }
+
+  /* One-click pay */
+  .oneclick-wrap {
+    padding: 12px 14px 0;
+  }
+  .nudge-banner {
+    position: relative;
+    background: #1a1f2e;
+    color: white;
+    border-radius: 12px;
+    padding: 8px 12px;
+    margin: 0 4px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    animation: nudgeFloat 1.8s ease-in-out infinite;
+  }
+  .nudge-banner::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 32px;
+    width: 10px;
+    height: 10px;
+    background: #1a1f2e;
+    transform: rotate(45deg);
+  }
+  .nudge-badge {
+    background: #ffe040;
+    color: #1a1f2e;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+  .nudge-text { color: white; font-size: 12px; }
+  .nudge-text strong { color: #ffe040; font-weight: 800; }
+  @keyframes nudgeFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+  .oneclick-cta {
+    width: 100%;
+    background: #1a1f2e;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .oneclick-icon { font-size: 16px; }
+  .oneclick-title { font-size: 15px; font-weight: 800; color: white; }
+
+  /* 원터치 슬라이드 결제 버튼 (옵션 팝업/장바구니용) */
+  .onetouch-slide-track {
+    background: linear-gradient(135deg, #1a1f2e 0%, #2d2740 100%);
+    border-radius: 28px;
+    height: 52px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+  .onetouch-slide-handle {
+    position: absolute;
+    left: 4px; top: 4px;
+    width: 72px; height: 44px;
+    background: linear-gradient(135deg, #8b6cef 0%, #6c4fff 100%);
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    z-index: 2;
+    box-shadow: 0 2px 8px rgba(108,79,255,0.4);
+  }
+  .onetouch-slide-arrow {
+    color: white;
+    font-size: 18px;
+    font-weight: 900;
+  }
+  .onetouch-slide-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex: 1;
+    color: white;
+    padding-left: 52px;
+  }
+  .onetouch-slide-logo {
+    width: 22px; height: 22px;
+    background: #8b6cef;
+    border-radius: 50%;
+    color: white;
+    font-size: 12px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .onetouch-slide-text { font-size: 14px; font-weight: 700; color: white; }
+  .onetouch-slide-text strong { color: #b3a3ff; font-weight: 800; }
+  .opt-cta-row {
+    display: flex;
+    gap: 8px;
+    padding: 10px 14px 22px;
+  }
+  .opt-cta-cart, .opt-cta-buy {
+    flex: 1;
+    padding: 16px;
+    border: none;
+    border-radius: 30px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .opt-cta-cart { background: #1a1f2e; color: white; }
+  .opt-cta-buy { background: #ff3b5c; color: white; }
+
+  /* Quick Order */
+  .quick-order-body {
+    flex: 1;
+    overflow-y: auto;
+    background: white;
+    padding-bottom: 16px;
+  }
+  /* 퀵주문서 레이어팝업 (높이 약 66%) */
+  .qo-popup-inner {
+    width: 100%;
+    background: white;
+    border-radius: 20px 20px 0 0;
+    overflow: hidden;
+    animation: slideUp 0.3s ease;
+    height: 66%;
+    display: flex;
+    flex-direction: column;
+  }
+  .qo-popup-header {
+    background: white;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    flex-shrink: 0;
+  }
+  .qo-popup-title {
+    flex: 1;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: #111;
+  }
+  .qo-popup-body {
+    flex: 1;
+    overflow-y: auto;
+    background: white;
+  }
+  .qo-popup-cta {
+    flex-shrink: 0;
+    background: white;
+    border-top: 1px solid #f0f0f0;
+    padding: 12px 16px 16px;
+  }
+  .qo-section {
+    padding: 16px 18px;
+    background: white;
+  }
+  .qo-section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111;
+    margin-bottom: 12px;
+    display: block;
+  }
+  .qo-section-divider {
+    height: 1.5px; background: #111;
+    margin: 0 -18px 14px;
+  }
+  .qo-section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .qo-section-aside { font-size: 12px; color: #888; }
+  .qo-section-note {
+    color: #ff3b5c;
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .qo-product-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .qo-check {
+    width: 22px; height: 22px;
+    background: #ff3b5c;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .qo-prod-thumb {
+    width: 70px; height: 70px;
+    background: #e8ecff;
+    border-radius: 12px;
+    position: relative;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .qo-prod-info { flex: 1; min-width: 0; }
+  .qo-prod-name { font-size: 14px; font-weight: 600; color: #111; margin-bottom: 4px; }
+  .qo-prod-origin { font-size: 12px; color: #b0b0b0; text-decoration: line-through; margin-bottom: 2px; }
+  .qo-prod-price { font-size: 17px; font-weight: 800; color: #111; }
+  .qo-qty-delete-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .qo-qty-stepper {
+    display: flex;
+    align-items: center;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 4px 6px;
+    flex: 1;
+    justify-content: center;
+  }
+  .qo-qty-btn {
+    width: 32px; height: 32px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #555;
+    cursor: pointer;
+  }
+  .qo-qty-value {
+    min-width: 30px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: #111;
+  }
+  .qo-delete-btn {
+    flex: 1;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 0 18px;
+    font-size: 14px;
+    color: #333;
+    font-weight: 600;
+    cursor: pointer;
+    height: 42px;
+  }
+  .qo-subtotal {
+    text-align: right;
+    font-size: 13px;
+    color: #555;
+    margin-top: 8px;
+  }
+  .qo-subtotal strong { color: #111; font-weight: 800; font-size: 15px; margin-left: 4px; }
+  .qo-select {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 13px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    background: white;
+  }
+  .qo-select-text { font-size: 14px; color: #bbb; }
+  .qo-select-arrow { color: #999; font-size: 14px; }
+  .qo-point-row { display: flex; gap: 8px; margin-top: 4px; }
+  .qo-point-input {
+    flex: 1;
+    padding: 13px 14px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    text-align: right;
+    outline: none;
+    background: white;
+  }
+  .qo-point-btn {
+    background: #8a94a8;
+    color: white;
+    border: none;
+    padding: 0 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .qo-thick-divider {
+    height: 8px;
+    background: #f4f6fa;
+  }
+  .qo-amount-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+  }
+  .qo-amount-label { font-size: 13px; color: #666; }
+  .qo-amount-value { font-size: 13px; color: #333; font-weight: 600; }
+  .qo-final-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    margin-top: 10px;
+    border-top: 1px solid #f0f0f0;
+  }
+  .qo-final-label { font-size: 15px; font-weight: 700; color: #111; }
+  .qo-final-value { font-size: 19px; font-weight: 800; color: #ff3b5c; }
+  .qo-info-section {
+    background: #f4f6fa;
+    padding: 12px 18px;
+  }
+  .qo-info-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 8px 0;
+  }
+  .qo-info-label { font-size: 13px; color: #888; width: 40px; flex-shrink: 0; }
+  .qo-info-value { flex: 1; font-size: 13px; color: #111; font-weight: 600; }
+  .qo-info-action { color: #ff3b5c; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .qo-agree-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    background: white;
+  }
+  .qo-agree-check {
+    width: 22px; height: 22px;
+    background: #ff3b5c;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .qo-agree-text { flex: 1; font-size: 13px; color: #333; font-weight: 600; }
+  .qo-agree-more { font-size: 12px; color: #999; cursor: pointer; }
+  .qo-slide-wrap {
+    background: white;
+    padding: 12px 16px 16px;
+    border-top: 1px solid #f0f0f0;
+  }
+  .qo-slide-track {
+    background: linear-gradient(135deg, #1a1f2e 0%, #2d2740 100%);
+    border-radius: 32px;
+    height: 56px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+  }
+  .qo-slide-handle {
+    position: absolute;
+    left: 4px; top: 4px;
+    width: 80px; height: 48px;
+    background: linear-gradient(135deg, #8b6cef 0%, #6c4fff 100%);
+    border-radius: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    z-index: 2;
+    box-shadow: 0 2px 8px rgba(108,79,255,0.4);
+  }
+  .qo-slide-arrow {
+    color: white;
+    font-size: 20px;
+    font-weight: 900;
+  }
+  .qo-slide-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex: 1;
+    color: white;
+    padding-left: 60px;
+  }
+  .qo-slide-logo {
+    width: 26px; height: 26px;
+    background: #8b6cef;
+    border-radius: 50%;
+    color: white;
+    font-size: 14px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .qo-slide-text { font-size: 15px; font-weight: 700; color: white; }
+  .qo-slide-text strong { color: #b3a3ff; font-weight: 800; }
+  .qo-other-pay {
+    text-align: center;
+    color: #888;
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 14px;
+  }
+
+  /* 주문서 하단 결제 버튼 */
+  .order-pay-cta-wrap {
+    background: white;
+    border-top: 1px solid #f0f0f0;
+  }
+  .order-pay-btn-wrap {
+    padding: 12px 16px 16px;
+  }
+  .order-pay-btn {
+    width: 100%;
+    background: #ff3b5c;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 18px;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .order-pay-btn:active { background: #e02e4d; }
+
+  /* 그립페이 빠른결제 버튼 */
+  .order-grippay-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #1a1f2e 0%, #2d2740 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 18px;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+    transition: opacity 0.15s;
+  }
+  .order-grippay-btn:active { opacity: 0.88; }
+  .order-grippay-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 80% 50%, rgba(139,108,239,0.2) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  .order-grippay-btn-logo {
+    width: 26px; height: 26px;
+    background: linear-gradient(135deg, #8b6cef 0%, #6c4fff 100%);
+    border-radius: 50%;
+    color: white;
+    font-size: 14px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+  .order-grippay-btn-text {
+    font-size: 16px;
+    font-weight: 800;
+    color: white;
+    z-index: 2;
+  }
+
+  /* 결제 완료 팝업 */
+  .pay-complete-box {
+    background: #f8f9fb;
+    border-radius: 12px;
+    padding: 16px;
+    margin: 20px 0 14px;
+  }
+  .pay-complete-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 13px;
+  }
+  .pay-complete-label {
+    color: #888;
+    font-weight: 500;
+  }
+  .pay-complete-value {
+    color: #333;
+    font-weight: 600;
+    text-align: right;
+  }
+  .pay-complete-value strong { font-weight: 700; }
+  .pay-complete-total {
+    border-top: 1px solid #e8e8e8;
+    margin-top: 6px;
+    padding-top: 12px;
+  }
+  .pay-complete-total .pay-complete-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #111;
+  }
+  .pay-complete-total .pay-complete-value {
+    font-size: 18px;
+    font-weight: 800;
+    color: #ff3b5c;
+  }
+  .pay-complete-tip {
+    background: #fff5f7;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 12px;
+    color: #555;
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+
+  /* 주문서 결제 비밀번호 (시트형) */
+  .pw-sheet-popup {
+    position: absolute; inset: 0; z-index: 270;
+    display: none; align-items: flex-end;
+    background: rgba(0,0,0,0.5);
+    animation: fadeIn 0.25s ease;
+  }
+  .pw-sheet-popup.active { display: flex; }
+  .pw-sheet-inner {
+    width: 100%;
+    background: white;
+    border-radius: 20px 20px 0 0;
+    overflow: hidden;
+    animation: slideUp 0.3s ease;
+    max-height: 60%;
+    display: flex;
+    flex-direction: column;
+  }
+  .pw-sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .pw-sheet-title {
+    flex: 1;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: #111;
+    margin-left: 24px;
+  }
+  .pw-sheet-body {
+    padding: 18px 20px 0;
+    text-align: center;
+  }
+  .pw-sheet-sub {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 16px;
+  }
+  .pw-sheet-dots {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  .pw-sheet-keypad-wrap {
+    background: #ebeef2;
+    padding: 10px 0 14px;
+  }
+  .pw-sheet-keypad-status {
+    text-align: center;
+    color: #7b2cf0;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .pw-sheet-keypad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding: 0 8px;
+  }
+  .pw-sheet-keypad-grid .pw-key {
+    height: 38px;
+    font-size: 20px;
+  }
+  .pw-sheet-keypad-grid .pw-key.submit {
+    height: 32px;
+    font-size: 12px;
+  }
+
+  /* 빠른결제 이용하기 토글 (비밀번호 시트 중간) */
+  .pw-quickpay-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px 16px;
+    margin-top: 4px;
+    border-top: 1px solid #f2f2f2;
+  }
+  .pw-quickpay-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .pw-quickpay-icon {
+    width: 32px; height: 32px;
+    background: #f0ecff;
+    color: #6c4fff;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .pw-quickpay-title { font-size: 14px; font-weight: 700; color: #111; }
+  .pw-quickpay-sub { font-size: 11px; color: #999; margin-top: 2px; }
+  .pw-quickpay-switch {
+    position: relative;
+    width: 44px; height: 26px;
+    border: none; background: transparent;
+    padding: 0; cursor: pointer;
+    flex-shrink: 0;
+  }
+  .pw-quickpay-track {
+    position: absolute; inset: 0;
+    background: #d0d0d0;
+    border-radius: 13px;
+    transition: background 0.2s;
+  }
+  .pw-quickpay-thumb {
+    position: absolute; top: 3px; left: 3px;
+    width: 20px; height: 20px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    transition: left 0.2s;
+  }
+  .pw-quickpay-switch.active .pw-quickpay-track { background: #6c4fff; }
+  .pw-quickpay-switch.active .pw-quickpay-thumb { left: 21px; }
+
+  /* Order Sheet (그립페이 미등록 고객 주문서) */
+  /* 일반주문서 inner: 헤더/본문/CTA 분리 구조 */
+  .order-sheet-inner {
+    width: 100%;
+    background: white;
+    border-radius: 20px 20px 0 0;
+    overflow: hidden;
+    animation: slideUp 0.3s ease;
+    height: 92%;
+    display: flex;
+    flex-direction: column;
+  }
+  .order-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: white;
+    border-bottom: 1px solid #f0f0f0;
+    flex-shrink: 0;
+  }
+  .order-header-title {
+    flex: 1;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: #111;
+  }
+  .order-body {
+    flex: 1;
+    overflow-y: auto;
+    background: #f5f7fa;
+    scroll-behavior: smooth;
+  }
+  .order-section {
+    background: white;
+    padding: 16px 20px;
+    margin-bottom: 8px;
+  }
+  .order-section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .order-section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #111;
+  }
+  .order-info-text {
+    font-size: 14px;
+    color: #333;
+    line-height: 1.5;
+  }
+  .order-info-text strong { font-weight: 700; }
+  .order-info-sub {
+    font-size: 12px;
+    color: #888;
+    line-height: 1.5;
+    margin-top: 4px;
+  }
+  .order-arrow-down { color: #999; font-size: 14px; }
+  .order-arrow-right { color: #999; font-size: 18px; }
+  .order-select-box {
+    background: #f5f7fa;
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: #333;
+  }
+  .order-benefit {
+    font-size: 12px;
+    color: #ff3b5c;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .order-check-mini {
+    width: 14px; height: 14px;
+    background: #ff3b5c;
+    color: white;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    font-weight: 900;
+  }
+  .order-product-row {
+    display: flex;
+    gap: 12px;
+    padding: 8px 0;
+  }
+  .order-prod-thumb {
+    width: 56px; height: 56px;
+    background: #fff0e6;
+    border-radius: 8px;
+    position: relative;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .order-prod-thumb .prod-thumb-lightning { top: 4px; left: 4px; width: 18px; height: 18px; font-size: 10px; }
+  .order-prod-thumb .prod-thumb-bag { right: 4px; bottom: 4px; width: 30px; height: 30px; }
+  .order-prod-info { flex: 1; }
+  .order-prod-seller {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 4px;
+  }
+  .order-prod-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #111;
+    margin-bottom: 6px;
+  }
+  .order-prod-bottom {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 13px;
+    color: #333;
+  }
+  .order-prod-price { font-weight: 700; }
+  .order-prod-qty { color: #888; }
+  .order-shipping {
+    background: #f5f7fa;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    font-size: 12px;
+    color: #555;
+    margin-top: 10px;
+  }
+  .order-point-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .order-point-input {
+    flex: 1;
+    padding: 12px 14px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    text-align: right;
+    outline: none;
+    background: white;
+  }
+  .order-point-btn {
+    background: #c0c4cd;
+    color: white;
+    border: none;
+    padding: 0 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .order-point-info {
+    font-size: 12px;
+    color: #888;
+    margin-top: 6px;
+  }
+  .order-point-info strong { color: #ff3b5c; font-weight: 700; }
+  .order-point-note {
+    font-size: 12px;
+    color: #ff3b5c;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+  .order-amount-final {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .order-amount-final-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #ff3b5c;
+  }
+  .order-amount-final-tag {
+    font-size: 12px;
+    color: #888;
+    background: #f3f5f8;
+    padding: 3px 8px;
+    border-radius: 10px;
+  }
+
+  /* 결제 수단 */
+  .order-pay-section { padding-bottom: 18px; }
+  .pay-method-grippay {
+    border: 2px solid transparent;
+    border-radius: 12px;
+    padding: 12px;
+    margin: 8px 0 16px;
+    background: white;
+    transition: all 0.2s;
+  }
+  .pay-method-grippay.focused {
+    border-color: #ffb3c1;
+    background: #fff8fa;
+  }
+  .pay-method-grippay.strong-focus {
+    border-color: #ff3b5c;
+    border-width: 2.5px;
+    background: #fff8fa;
+    box-shadow: 0 0 0 4px rgba(255,59,92,0.08);
+  }
+
+  /* 그립페이 미등록 상태 두꺼운 띠배너 */
+  .grippay-nudge-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, #1a1f2e 0%, #2d2740 100%);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin: -2px -2px 14px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  .grippay-nudge-banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 90% 50%, rgba(255,224,64,0.15) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  .grippay-nudge-icon {
+    font-size: 22px;
+    background: #ffe040;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    z-index: 2;
+  }
+  .grippay-nudge-content {
+    flex: 1;
+    z-index: 2;
+  }
+  .grippay-nudge-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 2px;
+  }
+  .grippay-nudge-sub {
+    font-size: 12px;
+    color: #ffe040;
+    font-weight: 600;
+  }
+  .grippay-nudge-arrow {
+    color: #ffe040;
+    font-size: 20px;
+    font-weight: 700;
+    z-index: 2;
+  }
+
+  /* 미등록 상태 풀폭 카드/계좌 추가 버튼 */
+  .pay-grippay-card-add.full-width {
+    width: 100%;
+    padding: 22px 16px;
+    flex-direction: row;
+    gap: 12px;
+    border-width: 1.5px;
+    border-color: #ff3b5c;
+    background: #fff;
+  }
+  .pay-grippay-card-add.full-width .pay-add-icon {
+    background: #ff3b5c;
+    width: 32px;
+    height: 32px;
+  }
+  .pay-grippay-card-add.full-width .pay-add-text {
+    font-size: 14px;
+    color: #111;
+    font-weight: 700;
+    text-align: left;
+    line-height: 1.3;
+  }
+  .pay-method-radio-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .pay-radio {
+    width: 18px; height: 18px;
+    border: 2px solid #ddd;
+    border-radius: 50%;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .pay-radio.checked {
+    border-color: #ff3b5c;
+  }
+  .pay-radio.checked::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    background: #ff3b5c;
+    border-radius: 50%;
+  }
+  .pay-radio.small {
+    width: 14px;
+    height: 14px;
+    border-width: 1.5px;
+  }
+  .pay-grippay-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pay-grippay-badge {
+    background: linear-gradient(135deg, #8b6cef 0%, #6c4fff 100%);
+    color: white;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 5px;
+  }
+  .pay-grippay-name {
+    font-size: 14px;
+    color: #111;
+    font-weight: 600;
+  }
+  .pay-grippay-cards {
+    display: flex;
+    gap: 8px;
+  }
+  .pay-grippay-card-item {
+    flex: 1;
+    background: #4880EE;
+    border-radius: 8px;
+    padding: 14px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: white;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  .pay-grippay-card-item.shinhan-card {
+    background: linear-gradient(135deg, #1a73e8 0%, #4880EE 100%);
+  }
+  .pay-grippay-card-item::before {
+    content: '';
+    position: absolute;
+    top: -10px; right: -10px;
+    width: 40px; height: 40px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+  }
+  .pay-grippay-card-logo {
+    width: 24px; height: 24px;
+    background: white;
+    color: #1a73e8;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 900;
+    z-index: 2;
+  }
+  .pay-grippay-card-name {
+    background: white;
+    color: #111;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 4px;
+    text-align: center;
+    width: 100%;
+    z-index: 2;
+  }
+  .pay-grippay-card-add {
+    flex: 1;
+    background: #f5f7fa;
+    border: 1px dashed #d0d0d0;
+    border-radius: 8px;
+    padding: 14px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .pay-grippay-card-add:active {
+    background: #fff5f7;
+    border-color: #ff3b5c;
+  }
+  .pay-add-icon {
+    width: 24px; height: 24px;
+    background: #d0d0d0;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 300;
+  }
+  .pay-add-text {
+    font-size: 11px;
+    color: #555;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.4;
+  }
+
+  .pay-method-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 4px;
+  }
+  .pay-method-logo {
+    background: #ffe040;
+    color: #111;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+  .pay-method-logo.kakao { background: #ffe040; }
+  .pay-method-logo.npay { background: #03c75a; color: white; }
+  .pay-method-logo.tosspay { background: #4880EE; color: white; }
+  .pay-method-logo.tosspay i { font-style: italic; }
+  .pay-method-logo.payco { background: #ff3038; color: white; }
+  .pay-method-name {
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+  }
+
+  .pay-general-section {
+    padding: 12px 4px;
+    border-top: 1px solid #f0f0f0;
+    margin-top: 8px;
+  }
+  .pay-general-title {
+    font-size: 14px;
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pay-general-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 16px;
+    padding-left: 8px;
+  }
+  .pay-general-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #333;
+  }
+  .pay-save-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 4px 0;
+    border-top: 1px solid #f0f0f0;
+    margin-top: 14px;
+  }
+  .pay-radio-check {
+    width: 18px; height: 18px;
+    background: #ff3b5c;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .pay-save-text {
+    font-size: 13px;
+    color: #333;
+    font-weight: 500;
+  }
+  .order-policy-note {
+    font-size: 11px;
+    color: #999;
+    line-height: 1.5;
+    margin-top: 6px;
+  }
+
+  /* 상품 상세 팝업 */
+  .pd-sheet {
+    width: 100%;
+    background: white;
+    border-radius: 20px 20px 0 0;
+    overflow: hidden;
+    animation: slideUp 0.3s ease;
+    max-height: 92%;
+    display: flex;
+    flex-direction: column;
+  }
+  .pd-close-row {
+    display: flex;
+    justify-content: flex-end;
+    padding: 12px 16px 0;
+    background: white;
+  }
+  .pd-close {
+    background: none; border: none;
+    font-size: 24px; color: #333;
+    cursor: pointer; padding: 4px;
+  }
+  .pd-body {
+    flex: 1;
+    overflow-y: auto;
+    background: white;
+  }
+  .pd-image-wrap {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: linear-gradient(135deg, #f3f0ff 0%, #e8ecff 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  .pd-image-inner {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pd-image-thumb {
+    width: 60%; height: 60%;
+    background: #c5cdfa;
+    border-radius: 24px;
+    position: relative;
+  }
+  .pd-image-lightning {
+    position: absolute;
+    top: 20%; left: 20%;
+    width: 60px; height: 60px;
+    background: #6c4fff;
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 32px;
+  }
+  .pd-image-bag {
+    position: absolute;
+    bottom: 16%; right: 16%;
+    width: 90px; height: 100px;
+    background: #a8b5ff;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 36px; font-weight: 800;
+  }
+  .pd-stock-bar {
+    background: #1a1a1a;
+    color: white;
+    text-align: center;
+    padding: 11px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .pd-info {
+    padding: 16px 18px 18px;
+  }
+  .pd-flash-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .pd-flash-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #6c4fff;
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 6px 10px;
+    border-radius: 6px;
+  }
+  .pd-share-icon {
+    background: none; border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: #555;
+  }
+  .pd-name {
+    font-size: 17px;
+    font-weight: 500;
+    color: #111;
+    margin-bottom: 14px;
+  }
+  .pd-price {
+    font-size: 28px;
+    font-weight: 800;
+    color: #111;
+    margin-bottom: 6px;
+  }
+  .pd-point-info {
+    font-size: 13px;
+    color: #888;
+  }
+  .pd-point-info strong {
+    color: #ff3b5c;
+    font-weight: 700;
+    margin-left: 4px;
+  }
+  .pd-divider {
+    height: 1px;
+    background: #f0f0f0;
+    margin: 0 18px;
+  }
+  .pd-shipping-info {
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .pd-ship-row {
+    display: flex;
+    gap: 18px;
+  }
+  .pd-ship-label {
+    color: #ff3b5c;
+    font-size: 14px;
+    font-weight: 600;
+    width: 56px;
+    flex-shrink: 0;
+  }
+  .pd-ship-value {
+    flex: 1;
+    font-size: 14px;
+    color: #333;
+    line-height: 1.5;
+  }
+  .pd-ship-value .sub {
+    color: #666;
+    font-size: 13px;
+    display: block;
+    margin-top: 2px;
+  }
+  .pd-tabs {
+    display: flex;
+    border-bottom: 1px solid #f0f0f0;
+    padding: 0 18px;
+    background: white;
+  }
+  .pd-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 14px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #999;
+    cursor: pointer;
+    position: relative;
+  }
+  .pd-tab.active {
+    color: #ff3b5c;
+    font-weight: 700;
+  }
+  .pd-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 0; right: 0;
+    height: 2px;
+    background: #ff3b5c;
+  }
+  .pd-tab-content {
+    padding: 20px 18px 40px;
+    min-height: 80px;
+    font-size: 13px;
+    color: #888;
+    background: white;
+  }
+  /* 하단 CTA */
+  .pd-cta-wrap {
+    background: white;
+    border-top: 1px solid #f0f0f0;
+    padding: 10px 12px 16px;
+  }
+  .pd-grippay-cta {
+    width: 100%;
+    background: #1a1f2e;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .pd-grippay-cta-icon { font-size: 16px; }
+  .pd-grippay-cta-text {
+    font-size: 15px;
+    font-weight: 800;
+    color: white;
+  }
+  .pd-bottom-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .pd-heart-btn {
+    width: 44px; height: 50px;
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #ccc;
+    flex-shrink: 0;
+  }
+  .pd-cart-btn {
+    flex: 1;
+    background: #1a1a1a;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .pd-buy-btn {
+    flex: 1;
+    background: #ff3b5c;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  /* Toast */
+  .toast {
+    position: absolute;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 24px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s;
+    white-space: nowrap;
+    max-width: 90%;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Live Order Sheet (라이브주문서 탭) */
+  .products-sheet .prod-tabs { flex-shrink: 0; }
+  .products-sheet .prod-panel { max-height: none; flex: 1; min-height: 0; }
+  .products-sheet .prod-panel.active { display: flex; flex-direction: column; padding: 0; }
+  .products-sheet #prodPanelProducts.active { padding: 14px 14px 20px; display: block; overflow-y: auto; }
+  .lo-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+  .lo-fixed-cta {
+    flex-shrink: 0;
+    background: white;
+    border-top: 1px solid #f0f0f0;
+    padding: 14px 16px 20px;
+  }
+  .lo-fixed-cta .lo-other-pay { margin-top: 12px; }
+  .lo-section {
+    background: white;
+    padding: 18px 20px;
+  }
+  .lo-section + .lo-section { border-top: 1px solid #f0f0f0; }
+  .lo-section-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px;
+  }
+  .lo-section-title {
+    font-size: 15px; font-weight: 700; color: #111;
+    margin-bottom: 12px; display: block;
+  }
+  .lo-section-aside { font-size: 12px; color: #888; }
+  .lo-section-aside strong { font-weight: 700; }
+  .lo-item { padding: 4px 0 10px; }
+  .lo-item-row {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 10px;
+  }
+  .lo-item-thumb {
+    width: 50px; height: 50px;
+    background: #e8ecff;
+    border-radius: 10px;
+    position: relative;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .lo-item-thumb .prod-thumb-lightning {
+    top: 3px; left: 3px; width: 16px; height: 16px; font-size: 10px;
+  }
+  .lo-item-thumb .prod-thumb-bag {
+    right: 3px; bottom: 3px; width: 26px; height: 28px;
+  }
+  .lo-item-thumb .prod-thumb-percent { font-size: 10px; }
+  .lo-item-info { flex: 1; min-width: 0; }
+  .lo-item-name {
+    font-size: 13px; color: #333; font-weight: 500;
+    margin-bottom: 6px;
+  }
+  .lo-item-price {
+    font-size: 16px; font-weight: 800; color: #111;
+  }
+  .lo-item-actions {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .lo-qty-stepper {
+    display: inline-flex; align-items: center;
+    border: 1px solid #e0e0e0;
+    border-radius: 18px;
+    background: white;
+  }
+  .lo-qty-btn {
+    width: 28px; height: 28px;
+    background: none; border: none;
+    font-size: 16px; color: #555;
+    cursor: pointer;
+  }
+  .lo-qty-value {
+    min-width: 28px; text-align: center;
+    font-size: 14px; font-weight: 700; color: #111;
+  }
+  .lo-delete-btn {
+    background: none; border: none;
+    font-size: 13px; color: #888;
+    cursor: pointer; padding: 4px 6px;
+  }
+  .lo-shipping-box {
+    background: #f5f7fa;
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+    font-size: 13px;
+    color: #555;
+    margin-top: 14px;
+  }
+  .lo-shipping-box strong { color: #111; font-weight: 700; margin-left: 4px; }
+  .lo-select-box {
+    background: #f5f7fa;
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .lo-select-placeholder { font-size: 13px; color: #b0b0b0; }
+  .lo-select-arrow { color: #888; font-size: 14px; }
+  .lo-point-note {
+    font-size: 11px; color: #ff3b5c; font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .lo-point-row {
+    display: flex; gap: 8px;
+  }
+  .lo-point-input {
+    flex: 1; padding: 12px 14px;
+    border: 1px solid #e0e0e0; border-radius: 8px;
+    background: white; text-align: right;
+    font-size: 14px; outline: none;
+  }
+  .lo-point-btn {
+    background: #8a94a8; color: white;
+    border: none; padding: 0 16px;
+    border-radius: 8px;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+  }
+  .lo-thick-divider { height: 8px; background: #f4f6fa; }
+  .lo-amount-row {
+    display: flex; justify-content: space-between;
+    padding: 5px 0; font-size: 13px; color: #555;
+  }
+  .lo-amount-row strong { color: #111; font-weight: 700; }
+  .lo-final-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding-top: 14px; margin-top: 10px;
+    border-top: 1px solid #f0f0f0;
+  }
+  .lo-final-label {
+    font-size: 16px; font-weight: 700; color: #111;
+  }
+  .lo-final-value {
+    font-size: 24px; font-weight: 800; color: #ff3b5c;
+  }
+  .lo-final-unit { font-size: 14px; margin-left: 2px; }
+  .lo-info-section {
+    background: white;
+    padding: 8px 20px;
+    border-top: 1px solid #f0f0f0;
+  }
+  .lo-info-row {
+    display: flex; align-items: center; gap: 16px;
+    padding: 14px 0;
+  }
+  .lo-info-divider { height: 1px; background: #f0f0f0; }
+  .lo-info-label {
+    font-size: 13px; color: #888; width: 40px; flex-shrink: 0;
+  }
+  .lo-info-value { flex: 1; font-size: 13px; color: #111; font-weight: 600; }
+  .lo-info-value strong { font-weight: 700; }
+  .lo-info-action {
+    font-size: 13px; color: #ff3b5c; font-weight: 700;
+    cursor: pointer;
+  }
+  .lo-agree-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 20px;
+    background: white;
+    border-top: 1px solid #f0f0f0;
+  }
+  .lo-agree-check {
+    width: 22px; height: 22px;
+    background: #ff3b5c;
+    border-radius: 50%;
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .lo-agree-text {
+    flex: 1; font-size: 13px; color: #333; font-weight: 500;
+  }
+  .lo-agree-more { font-size: 12px; color: #999; cursor: pointer; }
+  .lo-cta-wrap {
+    padding: 14px 16px 20px;
+    background: white;
+  }
+  .lo-other-pay {
+    text-align: center;
+    background: #ff3b5c;
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    margin-top: 10px;
+    cursor: pointer;
+    border-radius: 12px;
+    padding: 16px;
+  }
+
+  /* Simplified Terms (체크박스 없는 약관) */
+  .terms-simple-box {
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 16px 18px;
+    background: #fafafa;
+  }
+  .terms-simple-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .terms-simple-text {
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+  }
+  .terms-simple-view {
+    font-size: 12px;
+    color: #999;
+    cursor: pointer;
+  }
+  .terms-btn-row {
+    display: flex;
+    gap: 8px;
+  }
+  .terms-cancel-btn {
+    flex: 1;
+    background: #f0f0f0;
+    color: #555;
+    border: none;
+    padding: 16px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .terms-agree-btn { flex: 1; }
+
+  /* Cart Snackbar */
+  .cart-snackbar {
+    position: absolute;
+    bottom: 80px;
+    left: 12px;
+    right: 12px;
+    background: rgba(20, 20, 30, 0.95);
+    border-radius: 14px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 500;
+    opacity: 0;
+    transform: translateY(20px);
+    pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    backdrop-filter: blur(10px);
+  }
+  .cart-snackbar.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .cart-snackbar-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .cart-snackbar-text {
+    flex: 1;
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .cart-snackbar-action {
+    background: #ff3b5c;
+    color: white;
+    border: none;
+    border-radius: 18px;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  /* Step Label & Restart */
+  .step-label {
+    position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.7); color: white;
+    padding: 4px 10px; border-radius: 10px;
+    font-size: 10px; z-index: 300; pointer-events: none;
+  }
+  .restart {
+    position: fixed; bottom: 20px; right: 20px;
+    background: white; color: #333; border: none;
+    padding: 10px 16px; border-radius: 20px;
+    font-size: 13px; font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    cursor: pointer; z-index: 999;
+  }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="live-bg"></div>
+  <div class="status-bar">
+    <span>8:06</span>
+    <span>● ● ● ● 📶 🔋</span>
+  </div>
+
+  <!-- Live Top -->
+  <div class="live-top-row">
+    <div class="streamer-pill">
+      <div class="avatar">릴</div>
+      <div class="streamer-info">
+        <span class="streamer-name">릴리유나</span>
+        <span class="diamond">💎</span>
+      </div>
+      <button class="follow-pill">팔로우</button>
+    </div>
+    <div class="live-badge-row">
+      <div class="live-tag">LIVE</div>
+      <span class="live-timer">04:01</span>
+    </div>
+  </div>
+
+  <div class="live-stats-row">
+    <span class="stat">♥ <strong>2.6만</strong></span>
+    <span class="stat">👁 <strong>2,434</strong></span>
+    <button class="live-close-x">✕</button>
+  </div>
+
+  <!-- Side Cards -->
+  <div class="side-cards">
+    <div class="side-card">
+      <div class="side-card-icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="white"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm3 12h-2v-4h2v4zm-3-7V3.5L18.5 9H13z"/></svg>
+      </div>
+      <span class="side-card-label">주문서</span>
+    </div>
+    <div class="side-card">
+      <div class="side-card-icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="9" cy="21" r="1"></circle>
+          <circle cx="20" cy="21" r="1"></circle>
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+        </svg>
+      </div>
+      <span class="side-card-label">장바구니</span>
+    </div>
+    <div class="side-card" id="grippayCard">
+      <div class="side-card-icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="6" width="20" height="13" rx="2" ry="2"></rect>
+          <line x1="2" y1="11" x2="22" y2="11"></line>
+        </svg>
+        <div class="grippay-status-badge" id="grippayStatusBadge">!</div>
+      </div>
+      <span class="side-card-label">GripPay</span>
+    </div>
+    <!-- 토글: GripPay 카드 바깥 별도 영역 -->
+    <div class="grippay-toggle-wrap">
+      <button type="button" class="grippay-switch" id="grippayStatusToggle" aria-label="그립페이 등록 상태 토글">
+        <span class="grippay-switch-track"></span>
+        <span class="grippay-switch-thumb"></span>
+      </button>
+      <span class="grippay-switch-label" id="grippayStatusText">미등록</span>
+    </div>
+    <!-- 토글: 원터치 결제 -->
+    <div class="grippay-toggle-wrap">
+      <button type="button" class="grippay-switch" id="oneTouchToggle" aria-label="원터치 결제 토글">
+        <span class="grippay-switch-track"></span>
+        <span class="grippay-switch-thumb"></span>
+      </button>
+      <span class="grippay-switch-label" id="oneTouchText">비밀번호없이 결제</span>
+    </div>
+  </div>
+
+  <!-- Chat -->
+  <div class="chat-area">
+    <div class="chat-msg"><span class="nick c1">나비🦋</span> 선풍기 얼마에요?</div>
+    <div class="chat-msg"><span class="nick c2">홍길동</span> 와 이 가격 실화??</div>
+    <div class="chat-msg"><span class="nick c3">핑크고양</span>이 바로 담았어요!! 🛒</div>
+    <div class="chat-msg"><span class="nick c4">별빛소녀</span> 무료배송이에요?</div>
+  </div>
+
+  <!-- Bottom Bar -->
+  <div class="live-bottom-bar">
+    <div class="cart-icon" id="openProductsBtn">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#7b2cf0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <path d="M16 10a4 4 0 0 1-8 0"></path>
+      </svg>
+      <span class="cart-badge">4</span>
+    </div>
+    <div class="msg-input">메시지 입력</div>
+    <div class="heart-icon">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="white" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+    </div>
+  </div>
+
+  <!-- STEP 1: GripPay Management -->
+  <div class="layer-popup" id="step1">
+    <div class="step-label">1단계 · 그립페이 관리</div>
+    <div class="sheet">
+      <div class="sheet-header">
+        <span style="width:24px;"></span>
+        <div class="sheet-title">그립페이 관리</div>
+        <button class="close-btn" data-action="close-popup">✕</button>
+      </div>
+      <div class="sheet-subtitle">빠른 결제 · 안전한 거래</div>
+
+      <div class="ci-status-box" id="ciStatusBox">
+        <div class="ci-status-row">
+          <span class="ci-status-label">CI값 보유 여부 <span style="font-size:10px;color:#999;font-weight:400;">(테스트용)</span></span>
+          <button type="button" class="ci-toggle" id="ciToggle">
+            <span class="ci-toggle-text" id="ciToggleText">없음</span>
+            <span class="ci-toggle-slider"></span>
+          </button>
+        </div>
+        <div class="ci-status-desc" id="ciStatusDesc">
+          🆕 신규 사용자 · KCB 본인인증부터 진행됩니다.
+        </div>
+      </div>
+
+      <div class="pay-item" data-action="start-pay" data-type="card">
+        <div class="pay-icon card">💳</div>
+        <div class="pay-text">
+          <div class="main">카드 추가하기</div>
+          <div class="sub">신용/체크카드 등록</div>
+        </div>
+        <span class="arrow">›</span>
+      </div>
+      <div class="pay-item" data-action="start-pay" data-type="bank">
+        <div class="pay-icon bank">🏦</div>
+        <div class="pay-text">
+          <div class="main">계좌 추가하기</div>
+          <div class="sub">은행 계좌 등록</div>
+        </div>
+        <span class="arrow">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Grip Terms -->
+  <div class="layer-popup" id="step2">
+    <div class="step-label">2단계 · 약관동의</div>
+    <div class="sheet">
+      <div class="sheet-header-with-back">
+        <button class="back-btn" data-action="goto" data-step="1">‹</button>
+        <div class="sheet-title">그립페이 등록</div>
+        <button class="close-btn" data-action="goto" data-step="1">✕</button>
+      </div>
+
+      <div class="verify-icon-wrap">
+        <div class="verify-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        </div>
+      </div>
+
+      <div class="verify-title" id="step2Title">
+        안전한 결제수단 등록을 위해<br>
+        <span class="highlight">본인인증</span>이 필요합니다.
+      </div>
+
+      <div class="ci-badge" id="ciBadge" style="display:none;">
+        ✓ 본인인증 정보(CI) 확인됨 · 간편 등록 가능
+      </div>
+
+      <div class="terms-simple-box">
+        <div class="terms-simple-item">
+          <span class="terms-simple-text"><span class="required-tag">[필수]</span> 개인정보 제 3자 제공 동의</span>
+          <span class="terms-simple-view">보기 ›</span>
+        </div>
+      </div>
+
+      <div style="height:14px;"></div>
+
+      <div class="terms-btn-row">
+        <button class="terms-cancel-btn" data-action="goto" data-step="1">취소</button>
+        <button class="primary-btn terms-agree-btn" id="step2NextBtn" data-action="proceed-verify">동의</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: PASS Carrier -->
+  <div class="pass-screen" id="step3">
+    <div class="step-label">3단계 · 통신사 선택</div>
+    <div class="pass-statusbar"><span>7:23 🔕</span><span>● ● ● 📶 96</span></div>
+    <div class="pass-header">
+      <span style="width:24px;"></span>
+      <span class="pass-header-title">본인 인증</span>
+      <button class="pass-close" data-action="close-all">✕</button>
+    </div>
+    <div class="pass-body">
+      <div class="pass-logo-row">
+        <span class="pass-logo">PASS</span>
+        <div class="pass-tagline">인증을 넘어<br>일상으로 PASS</div>
+      </div>
+      <div class="pass-question">이용중인 통신사를<br>선택해 주세요</div>
+      <div class="carrier-grid">
+        <button class="carrier-cell" data-action="goto" data-step="4">SKT</button>
+        <button class="carrier-cell" data-action="goto" data-step="4">KT</button>
+        <button class="carrier-cell" data-action="goto" data-step="4">LG U+</button>
+        <button class="carrier-cell" data-action="goto" data-step="4">SKT<br><span style="font-size:11px;font-weight:400;">알뜰폰</span></button>
+        <button class="carrier-cell" data-action="goto" data-step="4">KT<br><span style="font-size:11px;font-weight:400;">알뜰폰</span></button>
+        <button class="carrier-cell" data-action="goto" data-step="4">LG U+<br><span style="font-size:11px;font-weight:400;">알뜰폰</span></button>
+      </div>
+      <div class="mvno-row"><span class="info-icon">i</span><span>알뜰폰 사업자 확인</span></div>
+    </div>
+  </div>
+
+  <!-- STEP 4: PASS Method -->
+  <div class="pass-screen" id="step4">
+    <div class="step-label">4단계 · 인증방법</div>
+    <div class="pass-statusbar"><span>7:23 🔕</span><span>● ● ● 📶 96</span></div>
+    <div class="pass-header">
+      <span style="width:24px;"></span>
+      <span class="pass-header-title">본인 인증</span>
+      <button class="pass-close" data-action="close-all">✕</button>
+    </div>
+    <div class="pass-body">
+      <div class="pass-logo-row">
+        <span class="pass-logo">PASS</span>
+        <div class="pass-tagline">인증을 넘어<br>일상으로 PASS</div>
+      </div>
+      <div class="pass-question">인증방법을<br>선택해 주세요</div>
+      <div class="method-card" id="method-pass" data-action="select-method" data-method="pass">
+        <div>
+          <div class="method-name">PASS 인증</div>
+          <div class="method-desc">앱으로 간편하고 안전하게!</div>
+        </div>
+        <div class="method-icon">📱</div>
+      </div>
+      <div class="method-card selected" id="method-sms" data-action="select-method" data-method="sms">
+        <div>
+          <div class="method-name">문자(SMS) 인증</div>
+          <div class="method-desc">SMS 인증번호로 본인확인</div>
+        </div>
+        <div class="method-icon">💬</div>
+      </div>
+      <div class="agreement-row" data-action="toggle-agree">
+        <div class="agree-check" id="agreeCheck">✓</div>
+        <div class="agree-text">본인확인 이용 동의<span class="required">(필수)</span></div>
+      </div>
+      <div class="bottom-area">
+        <button class="primary-btn" data-action="goto" data-step="5">다음</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5: PASS Info -->
+  <div class="pass-screen" id="step5">
+    <div class="step-label">5단계 · 입력정보</div>
+    <div class="pass-statusbar"><span>7:23 🔕</span><span>● ● ● 📶 96</span></div>
+    <div class="pass-header">
+      <span style="width:24px;"></span>
+      <span class="pass-header-title">본인 인증</span>
+      <button class="pass-close" data-action="close-all">✕</button>
+    </div>
+    <div class="pass-body">
+      <div class="pass-logo-row">
+        <span class="pass-logo">PASS</span>
+        <div class="pass-tagline">인증을 넘어<br>일상으로 PASS</div>
+      </div>
+      <div class="pass-question">입력정보를<br>확인해 주세요</div>
+      <input type="text" class="info-input" placeholder="이름" value="이열매">
+      <div class="rrn-row">
+        <input type="tel" class="rrn-front" placeholder="생년월일 6자리" maxlength="6">
+        <span>-</span>
+        <div class="rrn-back-num">2</div>
+        <span class="rrn-mask">●●●●●●</span>
+      </div>
+      <input type="tel" class="info-input" placeholder="휴대폰 번호">
+      <div class="bottom-area">
+        <button class="primary-btn" data-action="goto" data-step="6">다음</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 6: PASS Code -->
+  <div class="pass-screen" id="step6">
+    <div class="step-label">6단계 · 인증번호</div>
+    <div class="pass-statusbar"><span>7:24 🔕</span><span>● ● ● 📶 96</span></div>
+    <div class="pass-header">
+      <span style="width:24px;"></span>
+      <span class="pass-header-title">본인 인증</span>
+      <button class="pass-close" data-action="close-all">✕</button>
+    </div>
+    <div class="pass-body">
+      <div class="pass-logo-row">
+        <span class="pass-logo">PASS</span>
+        <div class="pass-tagline">인증을 넘어<br>일상으로 PASS</div>
+      </div>
+      <div class="pass-question" style="font-size:18px;">보내드린 인증번호 6자리를<br>입력해 주세요</div>
+      <div class="code-input-row">
+        <input type="tel" class="code-input" placeholder="인증번호" maxlength="6">
+        <button class="resend-btn" data-action="resend-kcb">↻ 재발송</button>
+      </div>
+      <div class="timer-row">
+        <span>🕐 남은시간 <strong id="timerText">2:58</strong></span>
+      </div>
+      <div class="bottom-area">
+        <button class="primary-btn" data-action="goto" data-step="7">완료</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 7: KCB Success -->
+  <div class="layer-popup" id="step7">
+    <div class="step-label">7단계 · 본인인증 완료</div>
+    <div class="sheet">
+      <div class="sheet-header">
+        <span style="width:24px;"></span>
+        <div class="sheet-title">본인인증 완료</div>
+        <span style="width:24px;"></span>
+      </div>
+      <div class="success-icon">✓</div>
+      <div class="verify-title">본인인증이 완료되었습니다.</div>
+      <div class="verify-desc">잠시 후 결제수단 등록으로 이동합니다...</div>
+      <div style="display:flex;justify-content:center;margin:24px 0;"><div class="loading-spinner"></div></div>
+      <button class="primary-btn" data-action="goto" data-step="8">바로 진행하기</button>
+    </div>
+  </div>
+
+  <!-- STEP 8: KCP Terms -->
+  <div class="kcp-screen" id="step8">
+    <div class="step-label">8단계 · KCP 약관동의</div>
+    <div class="kcp-statusbar white"><span>11:06 ✈️</span><span>● ● ● 📶 69</span></div>
+    <div class="kcp-header white">
+      <span style="width:24px;"></span>
+      <span class="kcp-header-title">결제수단 추가</span>
+      <button class="kcp-close dark" data-action="close-all">✕</button>
+    </div>
+    <div class="kcp-body white">
+      <div class="kcp-terms-headline">약관동의</div>
+      <div class="kcp-terms-sub">간편결제 등록을 위해 아래의 이용약관에<br>동의해주세요.</div>
+
+      <div class="kcp-terms-all-box" data-action="toggle-kcp-all">
+        <div class="kt-check" id="kcpTermAll">✓</div>
+        <span class="kcp-terms-all-text">전체동의</span>
+      </div>
+
+      <div class="kcp-terms-list">
+        <div class="kcp-terms-item" data-action="toggle-kcp-term" data-term="kcpT1">
+          <div class="kt-check small" id="kcpT1">✓</div>
+          <span class="kcp-terms-item-text">전자금융거래 이용약관</span>
+          <span class="kcp-terms-view">보기</span>
+        </div>
+        <div class="kcp-terms-item" data-action="toggle-kcp-term" data-term="kcpT2">
+          <div class="kt-check small" id="kcpT2">✓</div>
+          <span class="kcp-terms-item-text">개인정보 수집 및 이용동의</span>
+          <span class="kcp-terms-view">보기</span>
+        </div>
+        <div class="kcp-terms-item" data-action="toggle-kcp-term" data-term="kcpT3">
+          <div class="kt-check small" id="kcpT3">✓</div>
+          <span class="kcp-terms-item-text">개인정보 제공 동의</span>
+          <span class="kcp-terms-view">보기</span>
+        </div>
+        <div class="kcp-terms-item" data-action="toggle-kcp-term" data-term="kcpT4">
+          <div class="kt-check small" id="kcpT4">✓</div>
+          <span class="kcp-terms-item-text">카드사 개인(신용)정보 제공 동의</span>
+          <span class="kcp-terms-view">보기</span>
+        </div>
+        <div class="kcp-terms-item" data-action="toggle-kcp-term" data-term="kcpT5">
+          <div class="kt-check small" id="kcpT5">✓</div>
+          <span class="kcp-terms-item-text">민감정보의 수집 및 이용</span>
+          <span class="kcp-terms-view">보기</span>
+        </div>
+        <div class="kcp-terms-item">
+          <div style="width:20px;"></div>
+          <span class="kcp-terms-item-text">개인정보 처리방침</span>
+          <span class="kcp-terms-view">보기</span>
+        </div>
+      </div>
+
+      <div class="kcp-terms-bottom">
+        <button class="kcp-terms-next-btn" id="kcpTermsNextBtn" data-action="proceed-kcp-terms" disabled>다음</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 9: KCP Notice -->
+  <div class="kcp-screen" id="step9">
+    <div class="step-label">9단계 · KCP 안내</div>
+    <div class="kcp-statusbar"><span>7:25 🔕</span><span>● ● ● 📶 96</span></div>
+    <div class="kcp-header">
+      <button class="kcp-close" data-action="goto" data-step="8">‹</button>
+      <span class="kcp-header-title">결제수단 등록</span>
+      <button class="kcp-close" data-action="close-all">✕</button>
+    </div>
+    <div class="kcp-body">
+      <div class="kcp-logo-row">
+        <span class="kcp-logo">KCP</span>
+        <div class="kcp-tagline">안전한 결제의 시작<br>KCP 결제 인증</div>
+      </div>
+      <div class="kcp-icon-wrap">
+        <div class="kcp-icon">
+          <svg viewBox="0 0 24 24" style="width:36px;height:36px;fill:white;">
+            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+          </svg>
+        </div>
+      </div>
+      <div class="kcp-title">결제수단 등록을 위해<br><span class="kcp-highlight">추가 인증</span>이 필요합니다</div>
+      <div class="kcp-desc">안전한 결제 서비스 제공을 위해<br>KCP에서 본인 명의 휴대폰 인증을 진행합니다.</div>
+      <div class="kcp-info-box">
+        <div class="kcp-info-title">📌 안내사항</div>
+        <ul class="kcp-info-list">
+          <li>최초 1회만 진행되는 결제 인증입니다.</li>
+          <li>이후 결제수단 등록 시 별도 인증 없이 이용 가능합니다.</li>
+        </ul>
+      </div>
+      <div class="bottom-area">
+        <button class="primary-btn kcp-btn" data-action="goto" data-step="10">휴대폰 인증 시작</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 10: KCP Phone Input -->
+  <div class="kcp-screen" id="step10">
+    <div class="step-label">10단계 · KCP 휴대폰 입력</div>
+    <div class="kcp-statusbar"><span>7:25 🔕</span><span>● ● ● 📶 96</span></div>
+    <div class="kcp-header">
+      <button class="kcp-close" data-action="goto" data-step="9">‹</button>
+      <span class="kcp-header-title">휴대폰 본인확인</span>
+      <button class="kcp-close" data-action="close-all">✕</button>
+    </div>
+    <div class="kcp-body">
+      <div class="kcp-logo-row">
+        <span class="kcp-logo">KCP</span>
+        <div class="kcp-tagline">안전한 결제의 시작</div>
+      </div>
+      <div class="kcp-title" style="font-size:20px;text-align:left;margin-bottom:8px;">휴대폰 정보를<br>입력해 주세요</div>
+      <div class="kcp-form-group">
+        <label class="kcp-label">통신사</label>
+        <select class="kcp-select">
+          <option>SKT</option><option>KT</option><option>LG U+</option>
+        </select>
+      </div>
+      <div class="kcp-form-group">
+        <label class="kcp-label">이름</label>
+        <input type="text" class="kcp-input" value="이열매" readonly style="background:#f5f5f5;color:#777;">
+      </div>
+      <div class="kcp-form-group">
+        <label class="kcp-label">생년월일</label>
+        <input type="text" class="kcp-input" placeholder="YYMMDD" maxlength="6">
+      </div>
+      <div class="kcp-form-group">
+        <label class="kcp-label">휴대폰 번호</label>
+        <input type="tel" class="kcp-input" placeholder="'-' 없이 입력해주세요">
+      </div>
+      <div class="bottom-area">
+        <button class="primary-btn kcp-btn" data-action="goto" data-step="11">인증번호 받기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 11: KCP Code -->
+  <div class="kcp-screen" id="step11">
+    <div class="step-label">11단계 · KCP 인증번호</div>
+    <div class="kcp-statusbar"><span>7:26 🔕</span><span>● ● ● 📶 96</span></div>
+    <div class="kcp-header">
+      <button class="kcp-close" data-action="goto" data-step="10">‹</button>
+      <span class="kcp-header-title">휴대폰 본인확인</span>
+      <button class="kcp-close" data-action="close-all">✕</button>
+    </div>
+    <div class="kcp-body">
+      <div class="kcp-logo-row">
+        <span class="kcp-logo">KCP</span>
+        <div class="kcp-tagline">안전한 결제의 시작</div>
+      </div>
+      <div class="kcp-title" style="font-size:20px;text-align:left;margin-bottom:8px;">인증번호 6자리를<br>입력해 주세요</div>
+      <div class="kcp-form-group">
+        <label class="kcp-label">인증번호</label>
+        <div class="kcp-code-row">
+          <input type="tel" class="kcp-input" placeholder="인증번호 6자리" maxlength="6">
+          <span class="kcp-timer" id="kcpTimer">2:58</span>
+        </div>
+      </div>
+      <div class="bottom-area">
+        <button class="primary-btn kcp-btn" data-action="proceed-after-kcp">인증 확인</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 12: Card Registration -->
+  <div class="kcp-screen" id="step12">
+    <div class="step-label">12단계 · 카드 정보 입력</div>
+    <div class="kcp-statusbar white"><span>11:09 ✈️</span><span>● ● ● 📶 68</span></div>
+    <div class="kcp-header white">
+      <button class="kcp-close dark" data-action="goto" data-step="11">‹</button>
+      <span class="kcp-header-title">결제수단 추가</span>
+      <button class="kcp-close dark" data-action="close-all">✕</button>
+    </div>
+    <div class="kcp-body white" style="padding:24px 20px 0;">
+      <div class="card-headline">카드정보 입력</div>
+      <div class="card-sub">본인 명의의 신용/체크카드를 등록해 주세요.</div>
+      <div class="card-scan-row">
+        <button class="card-scan-btn">카드 스캔하기</button>
+      </div>
+      <div class="card-form-box">
+        <div class="card-row">
+          <div class="card-label-row">
+            <span class="card-label">카드번호</span>
+            <div class="card-brand">BC</div>
+          </div>
+          <div class="card-num-inputs">
+            <input type="tel" class="card-num-input" placeholder="0000" maxlength="4" value="4145">
+            <span class="card-dash">-</span>
+            <input type="tel" class="card-num-input" placeholder="0000" maxlength="4" value="2000">
+            <span class="card-dash">-</span>
+            <input type="tel" class="card-num-input" placeholder="●●●●" maxlength="4">
+            <span class="card-dash">-</span>
+            <input type="tel" class="card-num-input" placeholder="●●●●" maxlength="4">
+          </div>
+        </div>
+        <div class="card-row card-half-row">
+          <div class="card-half">
+            <span class="card-label">유효기간</span>
+            <div class="card-expiry">
+              <input type="tel" class="card-mini-input" placeholder="MM" maxlength="2">
+              <span class="card-dash">/</span>
+              <input type="tel" class="card-mini-input" placeholder="YY" maxlength="2">
+            </div>
+          </div>
+          <div class="card-half card-half-divider">
+            <span class="card-label">CVC</span>
+            <input type="tel" class="card-cvc-input" placeholder="●●●" maxlength="3">
+          </div>
+        </div>
+        <div class="card-row focused">
+          <span class="card-label">비밀번호</span>
+          <input type="password" class="card-pw-input" placeholder="●●" maxlength="2">
+        </div>
+      </div>
+      <button class="card-next-btn" data-action="goto" data-step="13">다음</button>
+    </div>
+  </div>
+
+  <!-- STEP 12b: Bank Selection -->
+  <div class="kcp-screen" id="step12b">
+    <div class="step-label">12단계 · 은행 선택</div>
+    <div class="kcp-statusbar white"><span>11:11 ✈️</span><span>● ● ● 📶 68</span></div>
+    <div class="kcp-header white">
+      <button class="kcp-close dark" data-action="goto" data-step="11">‹</button>
+      <span class="kcp-header-title">결제수단 추가</span>
+      <button class="kcp-close dark" data-action="close-all">✕</button>
+    </div>
+    <div class="kcp-body white" style="padding:20px;">
+      <div class="bank-headline">은행을 선택해 주세요</div>
+      <div class="bank-grid">
+        <div class="bank-cell" data-action="select-bank" data-bank="NH농협">
+          <div class="bank-logo nh"></div><span class="bank-name">NH농협</span>
+        </div>
+        <div class="bank-cell" data-action="select-bank" data-bank="카카오뱅크">
+          <div class="bank-logo kakao"><span style="color:#3a1d1d;font-weight:900;font-size:14px;">B</span></div><span class="bank-name">카카오뱅크</span>
+        </div>
+        <div class="bank-cell" data-action="select-bank" data-bank="KB국민">
+          <div class="bank-logo kb"><span style="color:#FFD300;font-size:18px;font-weight:900;">✱</span></div><span class="bank-name">KB국민</span>
+        </div>
+        <div class="bank-cell" data-action="select-bank" data-bank="토스뱅크">
+          <div class="bank-logo toss"><span style="color:white;font-weight:900;font-size:14px;">t</span></div><span class="bank-name">토스뱅크</span>
+        </div>
+        <div class="bank-cell" data-action="select-bank" data-bank="신한">
+          <div class="bank-logo shinhan"><span style="color:white;font-weight:900;font-size:14px;">S</span></div><span class="bank-name">신한</span>
+        </div>
+        <div class="bank-cell" data-action="select-bank" data-bank="우리">
+          <div class="bank-logo woori"></div><span class="bank-name">우리</span>
+        </div>
+        <div class="bank-cell" data-action="select-bank" data-bank="IBK기업">
+          <div class="bank-logo ibk"><span style="color:white;font-weight:900;font-size:11px;">IBK</span></div><span class="bank-name">IBK기업</span>
+        </div>
+        <div class="bank-cell" data-action="select-bank" data-bank="하나">
+          <div class="bank-logo hana"><span style="color:white;font-weight:900;font-size:13px;">하</span></div><span class="bank-name">하나</span>
+        </div>
+        <div class="bank-cell" data-action="select-bank" data-bank="새마을">
+          <div class="bank-logo mg"><span style="color:white;font-weight:900;font-size:13px;">새</span></div><span class="bank-name">새마을</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 13: Payment Password -->
+  <div class="kcp-screen" id="step13">
+    <div class="step-label">13단계 · 결제 비밀번호</div>
+    <div class="kcp-statusbar white"><span>11:10 ✈️</span><span>● ● ● 📶 68</span></div>
+    <div class="kcp-header white">
+      <button class="kcp-close dark" data-action="goto" data-step="12">‹</button>
+      <span class="kcp-header-title">결제수단 추가</span>
+      <button class="kcp-close dark" data-action="close-all">✕</button>
+    </div>
+    <div class="kcp-body white" style="padding:24px 20px 0;">
+      <div class="pw-headline">결제 비밀번호 등록</div>
+      <div class="pw-sub">결제 시 사용할 비밀번호를 입력해 주세요.</div>
+      <div class="pw-dots" id="pwDots">
+        <div class="pw-dot"></div><div class="pw-dot"></div><div class="pw-dot"></div>
+        <div class="pw-dot"></div><div class="pw-dot"></div><div class="pw-dot"></div>
+      </div>
+      <div class="pw-keypad-wrap">
+        <div class="pw-keypad-status">보안 키패드 작동중</div>
+        <div class="pw-keypad-grid">
+          <button class="pw-key" data-action="pw-input" data-num="5">5</button>
+          <button class="pw-key" data-action="pw-input" data-num="9">9</button>
+          <button class="pw-key" data-action="pw-input" data-num="6">6</button>
+          <button class="pw-key" data-action="pw-input" data-num="8">8</button>
+          <button class="pw-key" data-action="pw-input" data-num="3">3</button>
+          <button class="pw-key" data-action="pw-input" data-num="4">4</button>
+          <button class="pw-key" data-action="pw-input" data-num="0">0</button>
+          <button class="pw-key" data-action="pw-input" data-num="2">2</button>
+          <button class="pw-key" data-action="pw-input" data-num="7">7</button>
+        </div>
+        <div class="pw-keypad-grid" style="margin-top:6px;align-items:center;">
+          <button class="pw-key" data-action="pw-back">⌫</button>
+          <button class="pw-key action" data-action="pw-clear">CLEAR</button>
+          <button class="pw-key submit" data-action="pw-submit">입력완료</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 14: Success -->
+  <div class="layer-popup" id="step14">
+    <div class="step-label">14단계 · 등록 완료</div>
+    <div class="sheet">
+      <div class="sheet-header">
+        <span style="width:24px;"></span>
+        <div class="sheet-title">등록 완료</div>
+        <button class="close-btn" data-action="close-all">✕</button>
+      </div>
+      <div class="success-icon">✓</div>
+      <div class="verify-title">결제수단 등록이 완료되었습니다!</div>
+      <div class="verify-desc">이제 그립페이로 빠르고 안전하게 결제하세요.</div>
+      <div style="background:#f8f8f8;border-radius:10px;padding:14px;margin:20px 0;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:32px;height:32px;background:#e8453c;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:900;font-style:italic;">BC</div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:#111;">BC카드</div>
+            <div style="font-size:12px;color:#999;">4145 - 2000 - ●●●● - ●●●●</div>
+          </div>
+        </div>
+      </div>
+      <button class="primary-btn" data-action="complete-flow">라이브로 돌아가기</button>
+    </div>
+  </div>
+
+  <!-- Products Popup -->
+  <div class="layer-popup" id="stepProducts">
+    <div class="step-label">상품 리스트</div>
+    <div class="sheet products-sheet" style="padding:0;background:#f5f7fa;height:80%;display:flex;flex-direction:column;">
+      <div class="grab-bar"></div>
+      <div class="prod-tabs">
+        <button class="prod-tab active" data-action="prod-tab" data-tab="products">
+          <span class="prod-tab-text">판매상품 <strong>4</strong></span>
+        </button>
+        <button class="prod-tab" data-action="prod-tab" data-tab="cart">
+          <span class="prod-tab-text">라이브주문서 <strong id="cartCount">0</strong></span>
+        </button>
+        <button class="prod-close" data-action="close-all">✕</button>
+      </div>
+      <div class="prod-panel active" id="prodPanelProducts">
+        <div class="prod-card">
+          <div class="prod-thumb" data-action="open-pd" data-pay="grippay" data-order="normal" data-name="일반주문서용 상품" data-price="89000" style="cursor:pointer;">
+            <div class="prod-thumb-lightning">⚡</div>
+            <div class="prod-thumb-bag"><span class="prod-thumb-percent">%</span></div>
+          </div>
+          <div class="prod-info">
+            <span class="prod-tag none">옵션없음</span>
+            <div class="prod-name">일반주문서용 상품</div>
+            <div class="prod-price">89,000원</div>
+          </div>
+          <button class="prod-buy-btn" data-action="buy-product" data-pay="grippay" data-order="normal" data-name="일반주문서용 상품" data-price="89000">구매</button>
+        </div>
+        <div class="prod-card">
+          <div class="prod-thumb" data-action="open-pd" data-pay="grippay" data-order="quick" data-name="퀵주문서용 상품" data-price="129000" style="cursor:pointer;">
+            <div class="prod-thumb-lightning">⚡</div>
+            <div class="prod-thumb-bag"><span class="prod-thumb-percent">%</span></div>
+          </div>
+          <div class="prod-info">
+            <span class="prod-tag depth1">1뎁스</span>
+            <div class="prod-name">퀵주문서용 상품</div>
+            <div class="prod-price">129,000원</div>
+          </div>
+          <button class="prod-buy-btn" data-action="buy-product" data-pay="grippay" data-order="quick" data-name="퀵주문서용 상품" data-price="129000">구매</button>
+        </div>
+        <div class="prod-card">
+          <div class="prod-thumb" data-action="open-pd" data-pay="quick" data-order="normal" data-name="일반퀵결제1" data-price="69000" style="cursor:pointer;">
+            <div class="prod-thumb-lightning">⚡</div>
+            <div class="prod-thumb-bag"><span class="prod-thumb-percent">%</span></div>
+          </div>
+          <div class="prod-info">
+            <span class="prod-tag depth2">2뎁스</span>
+            <div class="prod-name">일반퀵결제1</div>
+            <div class="prod-price">69,000원</div>
+          </div>
+          <button class="prod-buy-btn" data-action="buy-product" data-pay="quick" data-order="normal" data-name="일반퀵결제1" data-price="69000">구매</button>
+        </div>
+        <div class="prod-card">
+          <div class="prod-thumb" data-action="open-pd" data-pay="quick" data-order="normal" data-name="일반퀵결제2" data-price="55000" style="cursor:pointer;">
+            <div class="prod-thumb-lightning">⚡</div>
+            <div class="prod-thumb-bag"><span class="prod-thumb-percent">%</span></div>
+          </div>
+          <div class="prod-info">
+            <span class="prod-tag depth3">3뎁스</span>
+            <div class="prod-name">일반퀵결제2</div>
+            <div class="prod-price">55,000원</div>
+          </div>
+          <button class="prod-buy-btn" data-action="buy-product" data-pay="quick" data-order="normal" data-name="일반퀵결제2" data-price="55000">구매</button>
+        </div>
+      </div>
+      <div class="prod-panel" id="prodPanelCart">
+        <div id="cartScrollArea" class="lo-scroll-area">
+          <div id="cartContent">
+            <div class="empty-cart">
+              <div class="empty-cart-icon">🛒</div>
+              <div class="empty-cart-text">라이브주문서가 비어있습니다.</div>
+              <div class="empty-cart-sub">마음에 드는 상품을 담아보세요.</div>
+            </div>
+          </div>
+        </div>
+        <div id="cartFixedCta" class="lo-fixed-cta" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option Popup -->
+  <div class="layer-popup" id="stepOption">
+    <div class="step-label">옵션 · 수량</div>
+    <div class="sheet" style="padding:0;background:white;">
+      <div class="grab-bar"></div>
+      <div class="opt-top">
+        <div class="opt-thumb">
+          <div class="prod-thumb-lightning">⚡</div>
+          <div class="prod-thumb-bag"><span class="prod-thumb-percent">%</span></div>
+          <div class="opt-last-badge">마지막 <strong>47</strong>개</div>
+        </div>
+        <div class="opt-info">
+          <div class="opt-name" id="optName">그립페이 퀵주문서</div>
+          <div class="opt-price-row">
+            <span class="opt-origin-price" id="optOriginPrice">220,000원</span>
+          </div>
+          <div class="opt-price-row">
+            <span class="opt-final-price" id="optFinalPrice">89,000원</span>
+            <span class="opt-live-tag">라이브가</span>
+          </div>
+        </div>
+        <button class="opt-close-x" data-action="close-option">✕</button>
+      </div>
+      <div class="opt-divider"></div>
+      <div class="opt-section">
+        <div class="opt-qty-row">
+          <span class="opt-qty-label">수량</span>
+          <div class="opt-qty-stepper">
+            <button class="opt-qty-btn" data-action="qty-minus">−</button>
+            <span class="opt-qty-value" id="optQty">1</span>
+            <button class="opt-qty-btn" data-action="qty-plus">+</button>
+          </div>
+        </div>
+      </div>
+      <div class="opt-divider"></div>
+      <div class="opt-total-section">
+        <div class="opt-shipping">무료배송 | 2일 이내 배송출발 예정</div>
+        <div class="opt-total-row">
+          <span class="opt-total-label">상품 총 금액</span>
+          <span class="opt-total-price" id="optTotalPrice">89,000원</span>
+        </div>
+      </div>
+      <div class="oneclick-wrap" id="optOneclickWrap" style="display:none;"></div>
+      <div class="opt-cta-row">
+        <button class="opt-cta-buy" data-action="buy-now" style="width:100%;">주문하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Order -->
+  <div class="layer-popup" id="stepQuickOrder">
+    <div class="step-label">빠른결제</div>
+    <div class="qo-popup-inner">
+      <div class="qo-popup-header">
+        <button class="back-btn" data-action="close-quick-order" style="color:#111;">‹</button>
+        <span class="qo-popup-title">빠른결제</span>
+        <button class="close-btn" data-action="close-quick-order">✕</button>
+      </div>
+      <div class="qo-popup-body">
+        <div class="qo-section">
+          <div class="qo-section-title">셀러샵</div>
+          <div class="qo-section-divider"></div>
+          <div class="qo-product-row">
+            <div class="qo-check">✓</div>
+            <div class="qo-prod-thumb">
+              <div class="prod-thumb-lightning">⚡</div>
+              <div class="prod-thumb-bag"><span class="prod-thumb-percent">%</span></div>
+            </div>
+            <div class="qo-prod-info">
+              <div class="qo-prod-name" id="qoProdName">퀵주문서용 상품</div>
+              <div class="qo-prod-origin" id="qoProdOrigin">220,000원</div>
+              <div class="qo-prod-price" id="qoProdPrice">129,000원</div>
+            </div>
+          </div>
+          <div class="qo-qty-delete-row">
+            <div class="qo-qty-stepper">
+              <button class="qo-qty-btn" data-action="qo-qty-minus">−</button>
+              <span class="qo-qty-value" id="qoQty">1</span>
+              <button class="qo-qty-btn" data-action="qo-qty-plus">+</button>
+            </div>
+            <button class="qo-delete-btn">삭제</button>
+          </div>
+          <div class="qo-subtotal" id="qoSubtotal">상품 129,000원 + 배송비 0원 = <strong>129,000원</strong></div>
+        </div>
+        <div class="qo-thick-divider"></div>
+        <div class="qo-section">
+          <div class="qo-section-title">결제 금액</div>
+          <div class="qo-amount-row"><span class="qo-amount-label">총 주문금액</span><span class="qo-amount-value" id="qoOrderTotal">129,000원</span></div>
+          <div class="qo-amount-row"><span class="qo-amount-label">배송비</span><span class="qo-amount-value">무료</span></div>
+          <div class="qo-final-row">
+            <span class="qo-final-label">총 결제 금액</span>
+            <span class="qo-final-value" id="qoFinalTotal">129,000원</span>
+          </div>
+        </div>
+        <div class="qo-info-section">
+          <div class="qo-info-row">
+            <span class="qo-info-label">배송지</span>
+            <span class="qo-info-value">알파돔 12층 그립</span>
+            <span class="qo-info-action">수정</span>
+          </div>
+          <div class="qo-info-row">
+            <span class="qo-info-label">결제</span>
+            <span class="qo-info-value"><strong>GripPay</strong>(BC카드)</span>
+          </div>
+        </div>
+        <div class="qo-agree-row">
+          <div class="qo-agree-check">✓</div>
+          <span class="qo-agree-text">주문 정보를 확인하였으며, 결제에 동의합니다.</span>
+        </div>
+      </div>
+      <div class="qo-popup-cta" id="qoSlideWrap">
+        <!-- 동적 렌더링: 원터치 ON → 슬라이드 / OFF → 빠른결제 버튼 -->
+        <div class="qo-other-pay">다른 수단으로 결제</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Order Sheet (일반 주문서 · 풀페이지 / 다른 결제수단으로 결제) -->
+  <div class="layer-popup" id="stepOrder">
+    <div class="step-label">일반 주문서</div>
+    <div class="order-sheet-inner" style="height:100%;border-radius:0;">
+      <div class="order-header">
+        <button class="back-btn" data-action="close-all" style="color:#111;">‹</button>
+        <span class="order-header-title">주문</span>
+        <span style="width:24px;"></span>
+      </div>
+
+      <div class="order-body">
+        <!-- 주문자 정보 -->
+        <div class="order-section">
+          <div class="order-section-head">
+            <span class="order-section-title">주문자 정보</span>
+            <span class="order-arrow-down">⌄</span>
+          </div>
+          <div class="order-info-text" style="color:#999;">이열매 01079247317</div>
+        </div>
+
+        <!-- 배송지 -->
+        <div class="order-section">
+          <div class="order-section-head">
+            <span class="order-section-title">배송지</span>
+            <span class="order-arrow-right">›</span>
+          </div>
+          <div class="order-info-text"><strong>이열매</strong> 01079247317</div>
+          <div class="order-info-sub">[05537] 서울 송파구 올림픽로45길 26 (풍납동, 칼라아파트), 403호</div>
+        </div>
+
+        <!-- 배송 요청 사항 -->
+        <div class="order-section">
+          <div class="order-section-head">
+            <span class="order-section-title">배송 요청 사항</span>
+          </div>
+          <div class="order-select-box">
+            <span style="color:#888;">배송시 요청사항을 선택해주세요.</span>
+            <span class="order-arrow-down">⌄</span>
+          </div>
+        </div>
+
+        <!-- 주문 상품 -->
+        <div class="order-section">
+          <div class="order-section-head">
+            <span class="order-section-title">주문 상품 <span style="color:#ff3b5c;font-weight:700;">1</span></span>
+          </div>
+          <div class="order-product-row">
+            <div class="order-prod-thumb">
+              <div class="prod-thumb-lightning">⚡</div>
+              <div class="prod-thumb-bag"><span class="prod-thumb-percent">%</span></div>
+            </div>
+            <div class="order-prod-info">
+              <div class="order-prod-seller">릴리유나 셀러샵</div>
+              <div class="order-prod-name" id="orderProdName">상품명</div>
+              <div class="order-prod-bottom">
+                <span class="order-prod-price" id="orderProdPrice">0원</span>
+                <span id="orderProdOrigin" style="color:#b0b0b0;text-decoration:line-through;font-size:12px;">0원</span>
+                <span class="order-prod-qty" id="orderProdQty">1개</span>
+              </div>
+            </div>
+          </div>
+          <div class="order-shipping">배송비 <span style="color:#ff3b5c;font-weight:700;">무료</span></div>
+        </div>
+
+        <!-- 쿠폰 -->
+        <div class="order-section">
+          <div class="order-section-head">
+            <span class="order-section-title">셀러 / 장바구니 쿠폰</span>
+            <span class="order-arrow-right">›</span>
+          </div>
+          <div class="order-info-sub" style="color:#999;">보유한 쿠폰이 없습니다.</div>
+        </div>
+
+        <!-- 포인트 -->
+        <div class="order-section">
+          <div class="order-section-title">포인트</div>
+          <div class="order-point-row">
+            <input type="text" class="order-point-input" value="0" readonly>
+            <button class="order-point-btn" style="background:#fff;color:#333;border:1px solid #e0e0e0;">모두 사용</button>
+          </div>
+          <div class="order-point-info">사용 가능 <strong style="color:#111;">620P</strong> / 보유 623P</div>
+        </div>
+
+        <!-- 결제 금액 -->
+        <div class="order-section">
+          <div class="order-section-head">
+            <span class="order-section-title">결제 금액</span>
+            <span class="order-arrow-down">⌄</span>
+          </div>
+          <div class="order-amount-final">
+            <span class="order-amount-final-value" id="orderAmountFinal">0원</span>
+            <span class="order-amount-final-tag" id="orderPointEarn">0P 적립예정</span>
+          </div>
+        </div>
+
+        <!-- 결제 수단 -->
+        <div class="order-section order-pay-section" id="orderPaySection">
+          <div class="order-section-title">결제 수단</div>
+
+          <!-- 그립페이 (강조) -->
+          <div class="pay-method-grippay strong-focus" data-action="order-select-pay" data-method="grippay" data-pay-name="그립페이">
+            <div class="grippay-nudge-banner">
+              <span class="grippay-nudge-icon">⚡</span>
+              <div class="grippay-nudge-content">
+                <div class="grippay-nudge-title">그립페이로 더 빠르고 안전하게!</div>
+                <div class="grippay-nudge-sub">첫 결제 5,000원 할인 · 한 번에 빠른결제</div>
+              </div>
+              <span class="grippay-nudge-arrow">›</span>
+            </div>
+            <div class="pay-method-radio-row">
+              <div class="pay-radio checked" id="orderRadioGrippay"></div>
+              <div class="pay-grippay-logo">
+                <span class="pay-grippay-badge">GripPay</span>
+                <span class="pay-grippay-name">그립페이</span>
+              </div>
+            </div>
+            <div class="pay-grippay-cards">
+              <div class="pay-grippay-card-add full-width" data-action="grippay-register-from-order">
+                <span class="pay-add-icon">+</span>
+                <span class="pay-add-text">카드 또는 계좌 추가하기</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pay-method-row" data-action="order-select-pay" data-method="kakao" data-pay-name="카카오페이">
+            <div class="pay-radio"></div>
+            <div class="pay-method-logo kakao">💛pay</div>
+            <span class="pay-method-name">카카오페이</span>
+          </div>
+          <div class="pay-method-row" data-action="order-select-pay" data-method="npay" data-pay-name="Npay">
+            <div class="pay-radio checked"></div>
+            <div class="pay-method-logo npay">N pay</div>
+            <span class="pay-method-name">Npay</span>
+          </div>
+          <div class="pay-method-row" data-action="order-select-pay" data-method="toss" data-pay-name="토스페이">
+            <div class="pay-radio"></div>
+            <div class="pay-method-logo tosspay">toss<i>pay</i></div>
+            <span class="pay-method-name">토스페이</span>
+          </div>
+          <div class="pay-method-row" data-action="order-select-pay" data-method="payco" data-pay-name="페이코">
+            <div class="pay-radio"></div>
+            <div class="pay-method-logo payco">PAYCO</div>
+            <span class="pay-method-name">페이코</span>
+          </div>
+
+          <!-- 일반 결제 -->
+          <div class="pay-general-section">
+            <div class="pay-general-title">
+              <span style="font-size:14px;">💳</span> 일반 결제
+            </div>
+            <div class="pay-general-grid">
+              <div class="pay-general-item" data-action="order-select-pay" data-method="general-card" data-pay-name="신용/체크카드">
+                <div class="pay-radio small"></div>
+                <span>신용/체크카드</span>
+              </div>
+              <div class="pay-general-item" data-action="order-select-pay" data-method="transfer" data-pay-name="실시간 계좌이체">
+                <div class="pay-radio small"></div>
+                <span>실시간 계좌이체</span>
+              </div>
+              <div class="pay-general-item" data-action="order-select-pay" data-method="phone" data-pay-name="휴대폰 결제">
+                <div class="pay-radio small"></div>
+                <span>휴대폰 결제</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pay-save-row">
+            <div class="pay-radio-check checked">✓</div>
+            <span class="pay-save-text">선택한 결제수단 저장</span>
+          </div>
+        </div>
+
+        <!-- 약관 -->
+        <div class="order-section">
+          <div class="order-section-head">
+            <span class="order-section-title" style="font-size:14px;">위 내용과 개인정보 수집 및 제공에 동의합니다.</span>
+            <span class="order-arrow-down">⌄</span>
+          </div>
+          <div class="order-policy-note">(주)그립은 통신판매중개시스템의 제공자로서, 통신판매의 당사자가 아니며 상품의 주문, 배송및 환불 등과 관련한 의무와 책임은 각 판매자에게 있습니다.</div>
+        </div>
+      </div>
+
+      <!-- 하단 결제 버튼 -->
+      <div class="order-pay-cta-wrap" id="orderPayCtaWrap">
+        <div class="order-grippay-btn-wrap" id="orderSlideWrap" style="padding:12px 16px 16px;">
+          <button class="order-grippay-btn" data-action="order-grippay-pay">
+            <span class="order-grippay-btn-logo">G</span>
+            <span class="order-grippay-btn-text">그립페이 빠른결제</span>
+          </button>
+        </div>
+        <div class="order-pay-btn-wrap" id="orderPayBtnWrap" style="display:none;">
+          <button class="order-pay-btn" id="orderPayBtn" data-action="order-pay-now">
+            <span id="orderPayBtnText">결제하기</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fast Pay (빠른결제 · 바텀 레이어 팝업 / 그립페이 전용) -->
+  <div class="layer-popup" id="stepFastPay">
+    <div class="step-label">빠른결제</div>
+    <div class="order-sheet-inner">
+      <div class="order-header">
+        <button class="back-btn" data-action="close-fastpay" style="color:#111;">‹</button>
+        <span class="order-header-title">빠른결제</span>
+        <button class="close-btn" data-action="close-fastpay">✕</button>
+      </div>
+      <div class="order-body">
+        <!-- 배송지 -->
+        <div class="order-section">
+          <div class="order-section-head">
+            <span class="order-section-title">배송지</span>
+            <span class="order-arrow-right">›</span>
+          </div>
+          <div class="order-info-text"><strong>이열매</strong> 01079247317</div>
+          <div class="order-info-sub">[05537] 서울 송파구 올림픽로45길 26 (풍납동, 칼라아파트), 403호</div>
+        </div>
+
+        <!-- 주문 상품 -->
+        <div class="order-section">
+          <div class="order-section-head">
+            <span class="order-section-title">주문 상품 <span style="color:#ff3b5c;font-weight:700;">1</span></span>
+          </div>
+          <div class="order-product-row">
+            <div class="order-prod-thumb">
+              <div class="prod-thumb-lightning">⚡</div>
+              <div class="prod-thumb-bag"><span class="prod-thumb-percent">%</span></div>
+            </div>
+            <div class="order-prod-info">
+              <div class="order-prod-seller">릴리유나 셀러샵</div>
+              <div class="order-prod-name" id="fpProdName">상품명</div>
+              <div class="order-prod-bottom">
+                <span class="order-prod-price" id="fpProdPrice">0원</span>
+                <span id="fpProdOrigin" style="color:#b0b0b0;text-decoration:line-through;font-size:12px;">0원</span>
+                <span class="order-prod-qty" id="fpProdQty">1개</span>
+              </div>
+            </div>
+          </div>
+          <div class="order-shipping">배송비 <span style="color:#ff3b5c;font-weight:700;">무료</span></div>
+        </div>
+
+        <!-- 쿠폰 -->
+        <div class="order-section">
+          <div class="order-section-head">
+            <span class="order-section-title">셀러 / 장바구니 쿠폰</span>
+            <span class="order-arrow-right">›</span>
+          </div>
+          <div class="order-info-sub" style="color:#999;">보유한 쿠폰이 없습니다.</div>
+        </div>
+
+        <!-- 포인트 -->
+        <div class="order-section">
+          <div class="order-section-title">포인트</div>
+          <div class="order-point-row">
+            <input type="text" class="order-point-input" value="0" readonly>
+            <button class="order-point-btn" style="background:#fff;color:#333;border:1px solid #e0e0e0;">모두 사용</button>
+          </div>
+          <div class="order-point-info">사용 가능 <strong style="color:#111;">620P</strong> / 보유 623P</div>
+        </div>
+
+        <!-- 결제 금액 -->
+        <div class="order-section">
+          <div class="order-section-head">
+            <span class="order-section-title">결제 금액</span>
+            <span class="order-arrow-down">⌄</span>
+          </div>
+          <div class="order-amount-final">
+            <span class="order-amount-final-value" id="fpAmountFinal">0원</span>
+            <span class="order-amount-final-tag" id="fpPointEarn">0P 적립예정</span>
+          </div>
+        </div>
+
+        <!-- 결제 수단 (그립페이 전용) -->
+        <div class="order-section order-pay-section" id="fpPaySection">
+          <div class="order-section-title">결제 수단</div>
+          <div class="pay-method-grippay strong-focus">
+            <div class="grippay-nudge-banner">
+              <span class="grippay-nudge-icon">⚡</span>
+              <div class="grippay-nudge-content">
+                <div class="grippay-nudge-title">그립페이로 더 빠르고 안전하게!</div>
+                <div class="grippay-nudge-sub">첫 결제 5,000원 할인 · 한 번에 빠른결제</div>
+              </div>
+              <span class="grippay-nudge-arrow">›</span>
+            </div>
+            <div class="pay-method-radio-row">
+              <div class="pay-radio checked"></div>
+              <div class="pay-grippay-logo">
+                <span class="pay-grippay-badge">GripPay</span>
+                <span class="pay-grippay-name">그립페이</span>
+              </div>
+            </div>
+            <div class="pay-grippay-cards">
+              <div class="pay-grippay-card-add full-width" data-action="fastpay-register">
+                <span class="pay-add-icon">+</span>
+                <span class="pay-add-text">카드 또는 계좌 추가하기</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 약관 -->
+        <div class="order-section">
+          <div class="order-section-head">
+            <span class="order-section-title" style="font-size:14px;">위 내용과 개인정보 수집 및 제공에 동의합니다.</span>
+            <span class="order-arrow-down">⌄</span>
+          </div>
+          <div class="order-policy-note">(주)그립은 통신판매중개시스템의 제공자로서, 통신판매의 당사자가 아니며 상품의 주문, 배송및 환불 등과 관련한 의무와 책임은 각 판매자에게 있습니다.</div>
+        </div>
+      </div>
+
+      <!-- 하단 결제 버튼 -->
+      <div class="order-pay-cta-wrap">
+        <div style="padding:12px 16px 16px;">
+          <button class="order-grippay-btn" data-action="fastpay-pay">
+            <span class="order-grippay-btn-logo">G</span>
+            <span class="order-grippay-btn-text" id="fpPayBtnText">그립페이 빠른결제</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 주문서 결제 비밀번호 시트 -->
+  <div class="pw-sheet-popup" id="stepPwSheet">
+    <div class="step-label">결제 비밀번호</div>
+    <div class="pw-sheet-inner">
+      <div class="pw-sheet-header">
+        <span style="width:24px;"></span>
+        <div class="pw-sheet-title">결제 비밀번호</div>
+        <button class="close-btn" data-action="close-pw-sheet">✕</button>
+      </div>
+      <div class="pw-sheet-body">
+        <div class="pw-sheet-sub">결제 비밀번호 6자리를 입력해 주세요.</div>
+        <div class="pw-sheet-dots" id="pwSheetDots">
+          <div class="pw-dot"></div><div class="pw-dot"></div><div class="pw-dot"></div>
+          <div class="pw-dot"></div><div class="pw-dot"></div><div class="pw-dot"></div>
+        </div>
+      </div>
+      <div class="pw-quickpay-row">
+        <div class="pw-quickpay-info">
+          <span class="pw-quickpay-icon">⚡</span>
+          <div>
+            <div class="pw-quickpay-title">빠른결제 이용하기</div>
+            <div class="pw-quickpay-sub">다음부터 비밀번호 없이 바로 결제</div>
+          </div>
+        </div>
+        <button type="button" class="pw-quickpay-switch" id="pwQuickPaySwitch" data-action="toggle-pw-quickpay" aria-label="빠른결제 이용하기 토글">
+          <span class="pw-quickpay-track"></span>
+          <span class="pw-quickpay-thumb"></span>
+        </button>
+      </div>
+      <div class="pw-sheet-keypad-wrap">
+        <div class="pw-sheet-keypad-status">보안 키패드 작동중</div>
+        <div class="pw-sheet-keypad-grid">
+          <button class="pw-key" data-action="pw-sheet-input" data-num="5">5</button>
+          <button class="pw-key" data-action="pw-sheet-input" data-num="9">9</button>
+          <button class="pw-key" data-action="pw-sheet-input" data-num="6">6</button>
+          <button class="pw-key" data-action="pw-sheet-input" data-num="8">8</button>
+          <button class="pw-key" data-action="pw-sheet-input" data-num="3">3</button>
+          <button class="pw-key" data-action="pw-sheet-input" data-num="4">4</button>
+          <button class="pw-key" data-action="pw-sheet-input" data-num="0">0</button>
+          <button class="pw-key" data-action="pw-sheet-input" data-num="2">2</button>
+          <button class="pw-key" data-action="pw-sheet-input" data-num="7">7</button>
+        </div>
+        <div class="pw-sheet-keypad-grid" style="margin-top:4px;align-items:center;">
+          <button class="pw-key" data-action="pw-sheet-back">⌫</button>
+          <button class="pw-key action" data-action="pw-sheet-clear">CLEAR</button>
+          <button class="pw-key submit" data-action="pw-sheet-submit">입력완료</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment Complete Popup -->
+  <div class="layer-popup" id="stepPayComplete">
+    <div class="step-label">결제 완료</div>
+    <div class="sheet">
+      <div class="sheet-header">
+        <span style="width:24px;"></span>
+        <div class="sheet-title">주문 완료</div>
+        <button class="close-btn" data-action="close-pay-complete">✕</button>
+      </div>
+      <div class="success-icon">✓</div>
+      <div class="verify-title" style="font-size:18px;">결제가 완료되었습니다!</div>
+      <div class="verify-desc">주문해주셔서 감사합니다.</div>
+
+      <div class="pay-complete-box">
+        <div class="pay-complete-row">
+          <span class="pay-complete-label">상품</span>
+          <span class="pay-complete-value" id="payCompleteProd">그립페이 퀵주문서</span>
+        </div>
+        <div class="pay-complete-row">
+          <span class="pay-complete-label">결제 수단</span>
+          <span class="pay-complete-value"><strong>GripPay</strong>(BC카드)</span>
+        </div>
+        <div class="pay-complete-row pay-complete-total">
+          <span class="pay-complete-label">결제 금액</span>
+          <span class="pay-complete-value" id="payCompleteAmount">4,000원</span>
+        </div>
+      </div>
+
+      <div class="pay-complete-tip">
+        📦 배송 현황은 마이그립 &gt; 주문/배송에서 확인하실 수 있어요.
+      </div>
+
+      <button class="primary-btn" data-action="close-pay-complete">라이브로 돌아가기</button>
+    </div>
+  </div>
+
+  <!-- Product Detail Popup -->
+  <div class="layer-popup" id="stepProductDetail">
+    <div class="step-label">상품 상세</div>
+    <div class="pd-sheet">
+      <div class="pd-close-row">
+        <button class="pd-close" data-action="close-product-detail">✕</button>
+      </div>
+      <div class="pd-body">
+        <div class="pd-image-wrap">
+          <div class="pd-image-inner">
+            <div class="pd-image-thumb">
+              <div class="pd-image-lightning">⚡</div>
+              <div class="pd-image-bag">%</div>
+            </div>
+          </div>
+        </div>
+        <div class="pd-stock-bar"><strong id="pdStock">1</strong>개 남음</div>
+        <div class="pd-info">
+          <div class="pd-flash-row">
+            <span class="pd-flash-tag">⚡ 플래시 상품</span>
+            <button class="pd-share-icon">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="18" cy="5" r="3"></circle>
+                <circle cx="6" cy="12" r="3"></circle>
+                <circle cx="18" cy="19" r="3"></circle>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="pd-name" id="pdName">일반주문서용 상품</div>
+          <div class="pd-price" id="pdPrice">89,000원</div>
+          <div class="pd-point-info">적립 예정 포인트 <strong id="pdPoint">178P</strong></div>
+        </div>
+        <div class="pd-divider"></div>
+        <div class="pd-shipping-info">
+          <div class="pd-ship-row">
+            <span class="pd-ship-label">배송</span>
+            <span class="pd-ship-value">택배 / 우체국택배</span>
+          </div>
+          <div class="pd-ship-row">
+            <span class="pd-ship-label">배송비</span>
+            <span class="pd-ship-value">
+              4,000원 / 100,000원 이상 무료배송
+              <span class="sub">제주/도서산간 추가 배송비 3,000 원</span>
+            </span>
+          </div>
+          <div class="pd-ship-row">
+            <span class="pd-ship-label">배송출발</span>
+            <span class="pd-ship-value">7일 이내 배송 출발 예정 (주말/공휴일 제외)</span>
+          </div>
+          <div class="pd-ship-row">
+            <span class="pd-ship-label">반품교환</span>
+            <span class="pd-ship-value">
+              판매자와 미리 협의하면, 진행이 원활합니다.
+              <span class="sub">- 반품배송비 : 편도 4,000원 (최초 배송비 무료인 경우, 왕복 배송비 8,000원 부과)</span>
+              <span class="sub">- 교환배송비 : 8,000원</span>
+            </span>
+          </div>
+        </div>
+        <div class="pd-tabs">
+          <button class="pd-tab active">상세정보</button>
+          <button class="pd-tab">리뷰</button>
+          <button class="pd-tab">상품문의</button>
+        </div>
+        <div class="pd-tab-content">
+          상품 상세정보 영역입니다.
+        </div>
+      </div>
+      <div class="pd-cta-wrap">
+        <div class="pd-bottom-row">
+          <button class="pd-heart-btn">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+          </button>
+          <button class="pd-cart-btn" data-action="pd-add-to-cart">장바구니</button>
+          <button class="pd-buy-btn" data-action="pd-buy-now">바로구매</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Alert -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Cart Added Snackbar -->
+  <div class="cart-snackbar" id="cartSnackbar">
+    <span class="cart-snackbar-icon">🛒</span>
+    <span class="cart-snackbar-text">라이브주문서에 상품이 담겼어요</span>
+    <button class="cart-snackbar-action" data-action="open-cart-snackbar">바로가기 ›</button>
+  </div>
+</div>
+
+<button class="restart" id="restartBtn">↻ 처음부터</button>
+
+<script>
+(function() {
+  'use strict';
+
+  // ===== 상태 =====
+  var state = {
+    hasCi: false,
+    oneTouch: false,
+    payType: 'card',
+    timerInterval: null,
+    kcpTimerInterval: null,
+    timerSeconds: 178,
+    kcpTimerSeconds: 178,
+    pwInput: '',
+    selectedBank: null,
+    currentProduct: null,
+    currentQty: 1,
+    qoQty: 1,
+    cart: [],
+    fromOrderSheet: false,
+    selectedPayMethod: 'grippay',
+    selectedPayName: '그립페이'
+  };
+  var termIds = ['term1', 'term2'];
+  var kcpTermIds = ['kcpT1', 'kcpT2', 'kcpT3', 'kcpT4', 'kcpT5'];
+
+  function $(id) { return document.getElementById(id); }
+  function closeAll() {
+    var all = document.querySelectorAll('.layer-popup, .pass-screen, .kcp-screen, .pw-sheet-popup');
+    for (var i = 0; i < all.length; i++) all[i].classList.remove('active');
+  }
+  function closeAllExceptOrder() {
+    var all = document.querySelectorAll('.layer-popup, .pass-screen, .kcp-screen, .pw-sheet-popup');
+    for (var i = 0; i < all.length; i++) {
+      if (all[i].id !== 'stepOrder') all[i].classList.remove('active');
+    }
+  }
+  function isOrderActive() {
+    var order = $('stepOrder');
+    return order && order.classList.contains('active');
+  }
+
+  // ===== 그립페이 등록 상태 UI 동기화 =====
+  function syncGrippayUI() {
+    var badge = $('grippayStatusBadge');
+    var swBtn = $('grippayStatusToggle');
+    var swText = $('grippayStatusText');
+    var ciToggle = $('ciToggle');
+    var ciText = $('ciToggleText');
+    var ciDesc = $('ciStatusDesc');
+    var ciBox = $('ciStatusBox');
+
+    if (state.hasCi) {
+      if (badge) { badge.textContent = '✓'; badge.classList.add('registered'); }
+      if (swBtn) swBtn.classList.add('active');
+      if (swText) swText.textContent = '등록완료';
+      if (ciToggle) ciToggle.classList.add('active');
+      if (ciText) ciText.textContent = '보유';
+      if (ciDesc) ciDesc.innerHTML = '✅ 기존 인증 사용자 · KCB 인증을 건너뛰고 KCP 약관동의로 바로 진행됩니다.';
+      if (ciBox) ciBox.classList.add('has-ci');
+    } else {
+      if (badge) { badge.textContent = '!'; badge.classList.remove('registered'); }
+      if (swBtn) swBtn.classList.remove('active');
+      if (swText) swText.textContent = '미등록';
+      if (ciToggle) ciToggle.classList.remove('active');
+      if (ciText) ciText.textContent = '없음';
+      if (ciDesc) ciDesc.innerHTML = '🆕 신규 사용자 · KCB 본인인증부터 진행됩니다.';
+      if (ciBox) ciBox.classList.remove('has-ci');
+    }
+  }
+
+  function toggleCi() {
+    state.hasCi = !state.hasCi;
+    syncGrippayUI();
+  }
+
+  function toggleOneTouch() {
+    state.oneTouch = !state.oneTouch;
+    syncOneTouchUI();
+    if (isOrderActive() && state.selectedPayMethod === 'grippay') {
+      renderOrderGrippayCta();
+    }
+    var qo = $('stepQuickOrder');
+    if (qo && qo.classList.contains('active')) {
+      renderQuickOrderCta();
+    }
+  }
+
+  function syncOneTouchUI() {
+    var btn = $('oneTouchToggle');
+    var label = $('oneTouchText');
+    if (label) label.textContent = '비밀번호없이 결제';
+    if (state.oneTouch) {
+      if (btn) btn.classList.add('active');
+    } else {
+      if (btn) btn.classList.remove('active');
+    }
+  }
+
+  // ===== 단계 이동 =====
+  function goStep(n) {
+    var overOrderMode = isOrderActive();
+    if (overOrderMode) {
+      closeAllExceptOrder();
+    } else {
+      closeAll();
+    }
+    var target = $('step' + n);
+    if (!target) return;
+    target.classList.add('active');
+    if (overOrderMode) {
+      target.classList.add('over-order');
+    }
+    if (n === 14) {
+      var btn = document.querySelector('#step14 [data-action="complete-flow"]');
+      if (btn) {
+        btn.textContent = overOrderMode ? '주문 계속하기' : '라이브로 돌아가기';
+      }
+    }
+    clearInterval(state.timerInterval);
+    clearInterval(state.kcpTimerInterval);
+    if (n === 6) startKcbTimer();
+    if (n === 7) setTimeout(function(){ if($('step7').classList.contains('active')) goStep(8); }, 2200);
+    if (n === 11) startKcpTimer();
+    if (n === 13) resetPw();
+  }
+
+  function startPayFlow(type) {
+    state.payType = type || 'card';
+    var title = $('step2Title');
+    var btn = $('step2NextBtn');
+    var badge = $('ciBadge');
+    if (state.hasCi) {
+      title.innerHTML = '결제수단 등록을 위해<br><span class="highlight">약관 동의</span>가 필요합니다.';
+      badge.style.display = 'block';
+    } else {
+      title.innerHTML = '안전한 결제수단 등록을 위해<br><span class="highlight">본인인증</span>이 필요합니다.';
+      badge.style.display = 'none';
+    }
+    if (btn) {
+      btn.textContent = '동의';
+      btn.disabled = false;
+      btn.style.background = '#ff3b5c';
+    }
+    goStep(2);
+  }
+
+  function proceedAfterKcp() {
+    if (state.payType === 'bank') goStep('12b');
+    else goStep(12);
+  }
+
+  function selectBank(name) {
+    state.selectedBank = name;
+    goStep(13);
+  }
+
+  // ===== 약관 =====
+  function toggleTerm(id) {
+    var el = $(id);
+    el.classList.toggle('unchecked');
+    el.textContent = el.classList.contains('unchecked') ? '' : '✓';
+    syncTerms();
+    updateTermsBtn();
+  }
+  function toggleAllTerms() {
+    var allEl = $('termAll');
+    var willCheck = allEl.classList.contains('unchecked');
+    allEl.classList.toggle('unchecked', !willCheck);
+    allEl.textContent = willCheck ? '✓' : '';
+    for (var i = 0; i < termIds.length; i++) {
+      var el = $(termIds[i]);
+      el.classList.toggle('unchecked', !willCheck);
+      el.textContent = willCheck ? '✓' : '';
+    }
+    updateTermsBtn();
+  }
+  function syncTerms() {
+    var allChecked = true;
+    for (var i = 0; i < termIds.length; i++) {
+      if ($(termIds[i]).classList.contains('unchecked')) { allChecked = false; break; }
+    }
+    var allEl = $('termAll');
+    allEl.classList.toggle('unchecked', !allChecked);
+    allEl.textContent = allChecked ? '✓' : '';
+  }
+  function updateTermsBtn() {
+    var btn = $('step2NextBtn');
+    var allChecked = true;
+    for (var i = 0; i < termIds.length; i++) {
+      if ($(termIds[i]).classList.contains('unchecked')) { allChecked = false; break; }
+    }
+    btn.disabled = !allChecked;
+    btn.style.background = allChecked ? '#ff3b5c' : '#ccc';
+  }
+  function proceedVerify() {
+    if (state.hasCi) goStep(8); else goStep(3);
+  }
+
+  function selectMethod(type) {
+    $('method-pass').classList.remove('selected');
+    $('method-sms').classList.remove('selected');
+    $('method-' + type).classList.add('selected');
+  }
+  function toggleAgree() {
+    var c = $('agreeCheck');
+    c.classList.toggle('unchecked');
+    c.textContent = c.classList.contains('unchecked') ? '' : '✓';
+  }
+
+  // ===== KCP 약관 =====
+  function toggleKcpTerm(id) {
+    var el = $(id);
+    el.classList.toggle('checked');
+    syncKcpTerms();
+    updateKcpTermsBtn();
+  }
+  function toggleKcpAll() {
+    var allEl = $('kcpTermAll');
+    var willCheck = !allEl.classList.contains('checked');
+    allEl.classList.toggle('checked', willCheck);
+    for (var i = 0; i < kcpTermIds.length; i++) {
+      $(kcpTermIds[i]).classList.toggle('checked', willCheck);
+    }
+    updateKcpTermsBtn();
+  }
+  function syncKcpTerms() {
+    var allChecked = true;
+    for (var i = 0; i < kcpTermIds.length; i++) {
+      if (!$(kcpTermIds[i]).classList.contains('checked')) { allChecked = false; break; }
+    }
+    $('kcpTermAll').classList.toggle('checked', allChecked);
+  }
+  function updateKcpTermsBtn() {
+    var btn = $('kcpTermsNextBtn');
+    var allChecked = true;
+    for (var i = 0; i < kcpTermIds.length; i++) {
+      if (!$(kcpTermIds[i]).classList.contains('checked')) { allChecked = false; break; }
+    }
+    btn.disabled = !allChecked;
+    btn.classList.toggle('active', allChecked);
+  }
+  function proceedKcpTerms() {
+    var allChecked = true;
+    for (var i = 0; i < kcpTermIds.length; i++) {
+      if (!$(kcpTermIds[i]).classList.contains('checked')) { allChecked = false; break; }
+    }
+    if (!allChecked) { alert('필수 약관에 모두 동의해주세요.'); return; }
+    goStep(9);
+  }
+
+  // ===== 비밀번호 =====
+  function pwInput(num) {
+    if (state.pwInput.length >= 6) return;
+    state.pwInput += num;
+    updatePwDots();
+    if (state.pwInput.length === 6) setTimeout(function(){
+      if (state.fromOrderSheet) {
+        completeOrderPayment();
+      } else {
+        goStep(14);
+      }
+    }, 300);
+  }
+  function pwBack() {
+    if (state.pwInput.length === 0) return;
+    state.pwInput = state.pwInput.slice(0, -1);
+    updatePwDots();
+  }
+  function pwClear() { state.pwInput = ''; updatePwDots(); }
+  function pwSubmit() {
+    if (state.pwInput.length < 6) { alert('비밀번호 6자리를 모두 입력해주세요.'); return; }
+    if (state.fromOrderSheet) {
+      completeOrderPayment();
+    } else {
+      goStep(14);
+    }
+  }
+
+  function completeOrderPayment() {
+    var p = state.currentProduct;
+    if (p) {
+      $('payCompleteProd').textContent = p.name;
+    }
+    $('payCompleteAmount').textContent = (state.orderTotal || (p ? p.price * (state.currentQty || 1) : 0)).toLocaleString() + '원';
+    closeAll();
+    $('stepPayComplete').classList.add('active');
+    state.fromOrderSheet = false;
+  }
+
+  function updatePwDots() {
+    var dots = document.querySelectorAll('#pwDots .pw-dot');
+    for (var i = 0; i < dots.length; i++) {
+      dots[i].classList.toggle('filled', i < state.pwInput.length);
+    }
+  }
+  function resetPw() { state.pwInput = ''; updatePwDots(); }
+
+  // ===== 주문서 결제 비밀번호 시트 =====
+  function openPwSheet() {
+    state.pwSheetInput = '';
+    state.pwSheetQuickPay = false;
+    var sw = $('pwQuickPaySwitch');
+    if (sw) sw.classList.remove('active');
+    updatePwSheetDots();
+    $('stepPwSheet').classList.add('active');
+  }
+  function togglePwQuickPay() {
+    state.pwSheetQuickPay = !state.pwSheetQuickPay;
+    var sw = $('pwQuickPaySwitch');
+    if (sw) sw.classList.toggle('active', state.pwSheetQuickPay);
+  }
+  function closePwSheet() {
+    $('stepPwSheet').classList.remove('active');
+    state.pwSheetInput = '';
+    updatePwSheetDots();
+  }
+  function pwSheetInput(num) {
+    if (!state.pwSheetInput) state.pwSheetInput = '';
+    if (state.pwSheetInput.length >= 6) return;
+    state.pwSheetInput += num;
+    updatePwSheetDots();
+    if (state.pwSheetInput.length === 6) {
+      setTimeout(function() {
+        finishPwSheetPayment();
+      }, 300);
+    }
+  }
+  function pwSheetBack() {
+    if (!state.pwSheetInput || state.pwSheetInput.length === 0) return;
+    state.pwSheetInput = state.pwSheetInput.slice(0, -1);
+    updatePwSheetDots();
+  }
+  function pwSheetClear() {
+    state.pwSheetInput = '';
+    updatePwSheetDots();
+  }
+  function pwSheetSubmit() {
+    if (!state.pwSheetInput || state.pwSheetInput.length < 6) {
+      alert('비밀번호 6자리를 모두 입력해주세요.');
+      return;
+    }
+    finishPwSheetPayment();
+  }
+  function finishPwSheetPayment() {
+    // 빠른결제 이용하기 토글 ON → 원터치결제 ON으로 전환
+    if (state.pwSheetQuickPay && !state.oneTouch) {
+      state.oneTouch = true;
+      syncOneTouchUI();
+    }
+    state.pwSheetQuickPay = false;
+    if (state.fromQuickOrder) {
+      closePwSheet();
+      completePaymentDirect();
+      state.fromQuickOrder = false;
+    } else if (state.fromOneclick) {
+      closePwSheet();
+      completePaymentDirect();
+      state.fromOneclick = false;
+    } else {
+      completeOrderPayment();
+      closePwSheet();
+    }
+  }
+  function updatePwSheetDots() {
+    var dots = document.querySelectorAll('#pwSheetDots .pw-dot');
+    var len = state.pwSheetInput ? state.pwSheetInput.length : 0;
+    for (var i = 0; i < dots.length; i++) {
+      dots[i].classList.toggle('filled', i < len);
+    }
+  }
+
+  // ===== 타이머 =====
+  function startKcbTimer() {
+    state.timerSeconds = 178;
+    updateKcb();
+    state.timerInterval = setInterval(function(){
+      state.timerSeconds--;
+      updateKcb();
+      if (state.timerSeconds <= 0) clearInterval(state.timerInterval);
+    }, 1000);
+  }
+  function updateKcb() {
+    var m = Math.floor(state.timerSeconds / 60);
+    var s = String(state.timerSeconds % 60);
+    if (s.length < 2) s = '0' + s;
+    var el = $('timerText'); if (el) el.textContent = m + ':' + s;
+  }
+  function startKcpTimer() {
+    state.kcpTimerSeconds = 178;
+    updateKcp();
+    state.kcpTimerInterval = setInterval(function(){
+      state.kcpTimerSeconds--;
+      updateKcp();
+      if (state.kcpTimerSeconds <= 0) clearInterval(state.kcpTimerInterval);
+    }, 1000);
+  }
+  function updateKcp() {
+    var m = Math.floor(state.kcpTimerSeconds / 60);
+    var s = String(state.kcpTimerSeconds % 60);
+    if (s.length < 2) s = '0' + s;
+    var el = $('kcpTimer'); if (el) el.textContent = m + ':' + s;
+  }
+
+  // ===== 상품 =====
+  function openProducts() { closeAll(); $('stepProducts').classList.add('active'); renderCart(); }
+  function switchTab(tab) {
+    var tabs = document.querySelectorAll('.prod-tab');
+    for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
+    document.querySelector('[data-tab="' + tab + '"]').classList.add('active');
+    $('prodPanelProducts').classList.remove('active');
+    $('prodPanelCart').classList.remove('active');
+    $(tab === 'products' ? 'prodPanelProducts' : 'prodPanelCart').classList.add('active');
+  }
+  function buyProduct(payType, name, price, orderType) {
+    state.currentProduct = {
+      payType: payType, name: name,
+      orderType: orderType || 'normal',
+      price: parseInt(price, 10),
+      originPrice: parseInt(price, 10) * 2 + 42000
+    };
+    state.currentQty = 1;
+    $('optName').textContent = name;
+    $('optOriginPrice').textContent = state.currentProduct.originPrice.toLocaleString() + '원';
+    $('optFinalPrice').textContent = state.currentProduct.price.toLocaleString() + '원';
+    $('optQty').textContent = '1';
+    $('optTotalPrice').textContent = state.currentProduct.price.toLocaleString() + '원';
+    renderOptOneclickArea();
+    closeAll();
+    $('stepOption').classList.add('active');
+  }
+
+  function openProductDetail(payType, name, price, orderType) {
+    state.currentProduct = {
+      payType: payType, name: name,
+      orderType: orderType || 'normal',
+      price: parseInt(price, 10),
+      originPrice: parseInt(price, 10) * 2 + 42000
+    };
+    state.currentQty = 1;
+    $('pdName').textContent = name;
+    $('pdPrice').textContent = state.currentProduct.price.toLocaleString() + '원';
+    var point = Math.floor(state.currentProduct.price * 0.002);
+    $('pdPoint').textContent = point + 'P';
+    closeAll();
+    $('stepProductDetail').classList.add('active');
+  }
+
+  function pdAddToCart() {
+    var p = state.currentProduct;
+    if (!p) return;
+    closeAll();
+    buyProduct(p.payType, p.name, p.price, p.orderType);
+  }
+
+  function pdBuyNow() {
+    var p = state.currentProduct;
+    if (!p) return;
+    closeAll();
+    buyProduct(p.payType, p.name, p.price, p.orderType);
+  }
+
+  function renderOptOneclickArea() {
+    var wrap = $('optOneclickWrap');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    wrap.style.display = 'none';
+  }
+  function qtyChange(d) {
+    state.currentQty = Math.max(1, Math.min(47, state.currentQty + d));
+    $('optQty').textContent = state.currentQty;
+    $('optTotalPrice').textContent = (state.currentProduct.price * state.currentQty).toLocaleString() + '원';
+  }
+  function addToCart() {
+    var p = state.currentProduct;
+    var existing = null;
+    for (var i = 0; i < state.cart.length; i++) {
+      if (state.cart[i].name === p.name) { existing = state.cart[i]; break; }
+    }
+    if (existing) existing.qty += state.currentQty;
+    else state.cart.push({ name: p.name, price: p.price, qty: state.currentQty });
+    closeAll();
+    showCartSnackbar();
+  }
+
+  function showCartSnackbar() {
+    var sb = $('cartSnackbar');
+    if (!sb) return;
+    sb.classList.add('show');
+    clearTimeout(state.snackbarTimer);
+    state.snackbarTimer = setTimeout(function() {
+      sb.classList.remove('show');
+    }, 3000);
+  }
+
+  function openCartFromSnackbar() {
+    var sb = $('cartSnackbar');
+    if (sb) sb.classList.remove('show');
+    clearTimeout(state.snackbarTimer);
+    openProducts();
+    switchTab('cart');
+  }
+  function removeFromCart(idx) {
+    state.cart.splice(idx, 1);
+    renderCart();
+  }
+  function renderCart() {
+    var countEl = $('cartCount');
+    if (countEl) countEl.textContent = state.cart.length;
+    var container = $('cartContent');
+    var fixedCta = $('cartFixedCta');
+    if (!container) return;
+    if (state.cart.length === 0) {
+      container.innerHTML = '<div class="empty-cart"><div class="empty-cart-icon">🛒</div><div class="empty-cart-text">라이브주문서가 비어있습니다.</div><div class="empty-cart-sub">마음에 드는 상품을 담아보세요.</div></div>';
+      if (fixedCta) { fixedCta.style.display = 'none'; fixedCta.innerHTML = ''; }
+      return;
+    }
+    if (state.hasCi) {
+      renderCartRegistered(container, fixedCta);
+    } else {
+      renderCartGuest(container, fixedCta);
+    }
+  }
+
+  // 그립페이 등록완료 → 퀵 라이브주문서 (배송비·결제수단 디폴트 세팅)
+  function renderCartRegistered(container, fixedCta) {
+    var itemsHtml = '';
+    var totalPrice = 0;
+    for (var i = 0; i < state.cart.length; i++) {
+      var item = state.cart[i];
+      totalPrice += item.price * item.qty;
+      itemsHtml +=
+        '<div class="lo-item">' +
+          '<div class="lo-item-row">' +
+            '<div class="lo-item-thumb"><div class="prod-thumb-lightning">⚡</div><div class="prod-thumb-bag"><span class="prod-thumb-percent">%</span></div></div>' +
+            '<div class="lo-item-info">' +
+              '<div class="lo-item-name">' + item.name + '</div>' +
+              '<div class="lo-item-price">' + (item.price * item.qty).toLocaleString() + '원</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="lo-item-actions">' +
+            '<div class="lo-qty-stepper">' +
+              '<button class="lo-qty-btn" data-action="lo-qty-minus" data-idx="' + i + '">−</button>' +
+              '<span class="lo-qty-value">' + item.qty + '</span>' +
+              '<button class="lo-qty-btn" data-action="lo-qty-plus" data-idx="' + i + '">+</button>' +
+            '</div>' +
+            '<button class="lo-delete-btn" data-action="cart-remove" data-idx="' + i + '">삭제</button>' +
+          '</div>' +
+        '</div>';
+    }
+    var final = totalPrice;
+
+    container.innerHTML =
+      '<div class="lo-section">' +
+        '<div class="lo-section-title">주문 상품 <strong style="color:#ff3b5c;">' + state.cart.length + '</strong></div>' +
+        itemsHtml +
+        '<div class="lo-shipping-box">배송비 <strong>무료배송</strong></div>' +
+      '</div>' +
+      '<div class="lo-thick-divider"></div>' +
+      '<div class="lo-section">' +
+        '<div class="lo-section-title" style="margin-bottom:14px;">결제 금액</div>' +
+        '<div class="lo-amount-row"><span>총 주문금액</span><strong>' + totalPrice.toLocaleString() + '원</strong></div>' +
+        '<div class="lo-amount-row"><span>배송비</span><strong>무료</strong></div>' +
+        '<div class="lo-final-row">' +
+          '<span class="lo-final-label">총 결제 금액</span>' +
+          '<span class="lo-final-value">' + final.toLocaleString() + '<span class="lo-final-unit">원</span></span>' +
+        '</div>' +
+      '</div>';
+
+    if (fixedCta) {
+      fixedCta.style.display = 'block';
+      fixedCta.innerHTML =
+        '<div style="display:flex;justify-content:flex-end;margin:0 0 8px;">' +
+          '<div class="nudge-banner" style="margin:0;padding:6px 10px;width:calc(50% - 4px);">' +
+            '<span class="nudge-badge" style="font-size:9px;padding:2px 6px;">GripPay</span>' +
+            '<span class="nudge-text" style="font-size:11px;"><strong>결제시 2배 적립</strong></span>' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:stretch;">' +
+          '<button data-action="cart-other-pay" style="padding:16px 10px;background:#ff3b5c;color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;">일반결제</button>' +
+          '<button class="order-grippay-btn" data-action="cart-grippay-pay" style="padding:16px 10px;">' +
+            '<span class="order-grippay-btn-logo">G</span>' +
+            '<span class="order-grippay-btn-text" style="font-size:14px;">그립페이 바로결제</span>' +
+          '</button>' +
+        '</div>';
+    }
+  }
+
+  // 그립페이 미등록 → 기본 장바구니 형태
+  function renderCartGuest(container, fixedCta) {
+    var totalQty = 0, totalPrice = 0, itemsHtml = '';
+    for (var i = 0; i < state.cart.length; i++) {
+      var item = state.cart[i];
+      totalQty += item.qty;
+      totalPrice += item.price * item.qty;
+      itemsHtml +=
+        '<div class="cart-item">' +
+          '<div class="cart-item-thumb"><div class="prod-thumb-lightning">⚡</div><div class="prod-thumb-bag"><span class="prod-thumb-percent">%</span></div></div>' +
+          '<div class="cart-item-info">' +
+            '<div class="cart-item-name">' + item.name + '</div>' +
+            '<div class="cart-item-bottom">' +
+              '<span class="cart-item-price">' + (item.price * item.qty).toLocaleString() + '원</span>' +
+              '<div class="lo-qty-stepper" style="margin-left:auto;">' +
+                '<button class="lo-qty-btn" data-action="lo-qty-minus" data-idx="' + i + '">−</button>' +
+                '<span class="lo-qty-value">' + item.qty + '</span>' +
+                '<button class="lo-qty-btn" data-action="lo-qty-plus" data-idx="' + i + '">+</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<button class="cart-item-remove" data-action="cart-remove" data-idx="' + i + '">✕</button>' +
+        '</div>';
+    }
+    var shipping = totalPrice >= 50000 ? 0 : 3000;
+    var final = totalPrice + shipping;
+
+    container.innerHTML =
+      '<div style="padding:14px;">' +
+        '<div class="cart-seller">' +
+          '<div class="cart-seller-head">' +
+            '<span class="cart-seller-name">릴리유나 셀러샵</span>' +
+            '<span class="cart-seller-count">총 ' + state.cart.length + '종 · ' + totalQty + '개</span>' +
+          '</div>' +
+          itemsHtml +
+        '</div>' +
+        '<div class="cart-summary">' +
+          '<div class="cart-summary-row"><span>상품 합계</span><strong>' + totalPrice.toLocaleString() + '원</strong></div>' +
+          '<div class="cart-summary-row"><span>배송비</span><strong>' + (shipping === 0 ? '무료' : shipping.toLocaleString() + '원') + '</strong></div>' +
+          '<div class="cart-summary-total">' +
+            '<span class="cart-summary-total-label">총 결제 금액</span>' +
+            '<span class="cart-summary-total-price">' + final.toLocaleString() + '원</span>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    if (fixedCta) {
+      fixedCta.style.display = 'block';
+      fixedCta.innerHTML =
+        '<div style="display:flex;justify-content:flex-end;margin:0 0 8px;">' +
+          '<div class="nudge-banner" style="margin:0;padding:6px 10px;width:calc(50% - 4px);">' +
+            '<span class="nudge-badge" style="font-size:9px;padding:2px 6px;">GripPay</span>' +
+            '<span class="nudge-text" style="font-size:11px;"><strong>결제시 2배 적립</strong></span>' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:stretch;">' +
+          '<button data-action="cart-other-pay" style="padding:16px 10px;background:#ff3b5c;color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;">결제하기</button>' +
+          '<button class="oneclick-cta" data-action="cart-grippay-pay" style="padding:16px 10px;">' +
+            '<span class="oneclick-icon">⚡</span>' +
+            '<span class="oneclick-title" style="font-size:14px;">그립페이 빠른결제</span>' +
+          '</button>' +
+        '</div>';
+    }
+  }
+
+  function loQtyChange(idx, d) {
+    if (!state.cart[idx]) return;
+    state.cart[idx].qty = Math.max(1, Math.min(99, state.cart[idx].qty + d));
+    renderCart();
+  }
+  function orderFromCart() {
+    if (state.cart.length === 0) return;
+    var first = state.cart[0];
+    state.currentProduct = {
+      payType: 'grippay',
+      name: first.name,
+      price: first.price,
+      originPrice: first.price * 2 + 42000
+    };
+    state.currentQty = first.qty;
+    openOrderSheet(false, 'kakao');
+  }
+  function cartGrippayPay() {
+    if (state.cart.length === 0) return;
+    var first = state.cart[0];
+    state.currentProduct = {
+      payType: 'grippay',
+      name: first.name,
+      price: first.price,
+      originPrice: first.price * 2 + 42000
+    };
+    state.currentQty = first.qty;
+    if (!state.hasCi) {
+      // 미등록 → 토스트 안내 후 일반 주문서로 이동
+      showToast('그립페이 등록을 위해 주문서로 이동합니다.');
+      setTimeout(function() {
+        openOrderSheet(true);
+      }, 800);
+      return;
+    }
+    // 등록 고객 → 빠른결제 레이어팝업 노출
+    openFastPay();
+  }
+  function buyNow() {
+    var p = state.currentProduct;
+    if (p.payType !== 'grippay') {
+      alert('일반 퀵결제 진행');
+      closeAll();
+      return;
+    }
+    if (!state.hasCi) {
+      goStep(1);
+      return;
+    }
+    if (p.orderType === 'quick') {
+      openQuickOrder();
+    } else {
+      openOrderSheet();
+    }
+  }
+  function oneclickPay() {
+    if (!state.hasCi) {
+      showToast('그립페이 등록을 위해 주문서로 이동합니다.');
+      setTimeout(function() {
+        openOrderSheet(true);
+      }, 800);
+      return;
+    }
+    openQuickOrder();
+  }
+
+  function completePaymentDirect() {
+    var p = state.currentProduct;
+    if (p) {
+      $('payCompleteProd').textContent = p.name;
+      $('payCompleteAmount').textContent = (p.price * state.currentQty).toLocaleString() + '원';
+    }
+    closeAll();
+    $('stepPayComplete').classList.add('active');
+  }
+
+  function showToast(msg) {
+    var toast = $('toast');
+    if (!toast) return;
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(function() {
+      toast.classList.remove('show');
+    }, 2200);
+  }
+
+  function openOrderSheet(scrollToPay, defaultPay) {
+    var p = state.currentProduct;
+    var qty = state.currentQty || 1;
+    var total = p ? p.price * qty : 0;
+    state.orderTotal = total;
+    if (p) {
+      $('orderProdName').textContent = p.name;
+      $('orderProdPrice').textContent = p.price.toLocaleString() + '원';
+      var originEl = $('orderProdOrigin');
+      if (originEl) originEl.textContent = (p.originPrice || 0).toLocaleString() + '원';
+      var qtyEl = $('orderProdQty');
+      if (qtyEl) qtyEl.textContent = qty + '개';
+    }
+    var amtEl = $('orderAmountFinal');
+    if (amtEl) amtEl.textContent = total.toLocaleString() + '원';
+    var earnEl = $('orderPointEarn');
+    if (earnEl) earnEl.textContent = Math.floor(total * 0.003) + 'P 적립예정';
+    renderOrderGrippayArea();
+    var method = defaultPay || 'grippay';
+    var nameMap = { grippay: '그립페이', kakao: '카카오페이', npay: 'Npay', toss: '토스페이', payco: '페이코' };
+    selectOrderPayMethod(method, nameMap[method] || '그립페이');
+    closeAll();
+    $('stepOrder').classList.add('active');
+    setTimeout(function() {
+      var body = document.querySelector('#stepOrder .order-body');
+      if (!body) return;
+      if (scrollToPay) {
+        var paySection = $('orderPaySection');
+        if (paySection) body.scrollTop = paySection.offsetTop - 20;
+      } else {
+        body.scrollTop = 0;
+      }
+    }, 100);
+  }
+
+  function renderOrderGrippayArea() {
+    var grippayBox = document.querySelector('#orderPaySection .pay-method-grippay');
+    var banner = document.querySelector('#orderPaySection .grippay-nudge-banner');
+    var cardsArea = document.querySelector('#orderPaySection .pay-grippay-cards');
+    if (!cardsArea) return;
+    if (state.hasCi) {
+      if (banner) banner.style.display = 'none';
+      if (grippayBox) grippayBox.classList.remove('strong-focus');
+      cardsArea.innerHTML =
+        '<div class="pay-grippay-card-item shinhan-card">' +
+        '<div class="pay-grippay-card-logo">S</div>' +
+        '<div class="pay-grippay-card-name">신한카드</div>' +
+        '</div>' +
+        '<div class="pay-grippay-card-add" data-action="grippay-register-from-order">' +
+        '<span class="pay-add-icon">+</span>' +
+        '<span class="pay-add-text">카드 또는 계좌<br>추가하기</span>' +
+        '</div>';
+    } else {
+      if (banner) banner.style.display = 'flex';
+      if (grippayBox) grippayBox.classList.add('strong-focus');
+      cardsArea.innerHTML =
+        '<div class="pay-grippay-card-add full-width" data-action="grippay-register-from-order">' +
+        '<span class="pay-add-icon">+</span>' +
+        '<span class="pay-add-text">카드 또는 계좌 추가하기</span>' +
+        '</div>';
+    }
+  }
+
+  function refreshOrderGrippay() {
+    var cardsArea = document.querySelector('#orderPaySection .pay-grippay-cards');
+    if (!cardsArea) return;
+    cardsArea.innerHTML =
+      '<div class="pay-grippay-card-item shinhan-card">' +
+      '<div class="pay-grippay-card-logo" style="background:#e8453c;color:white;">BC</div>' +
+      '<div class="pay-grippay-card-name">BC카드</div>' +
+      '</div>' +
+      '<div class="pay-grippay-card-add" data-action="grippay-register-from-order">' +
+      '<span class="pay-add-icon">+</span>' +
+      '<span class="pay-add-text">카드 또는 계좌<br>추가하기</span>' +
+      '</div>';
+    var banner = document.querySelector('#orderPaySection .grippay-nudge-banner');
+    var grippayBox = document.querySelector('#orderPaySection .pay-method-grippay');
+    if (banner) banner.style.display = 'none';
+    if (grippayBox) grippayBox.classList.remove('strong-focus');
+  }
+
+  function selectOrderPayMethod(method, name) {
+    var allRadios = document.querySelectorAll('#orderPaySection .pay-radio');
+    for (var i = 0; i < allRadios.length; i++) allRadios[i].classList.remove('checked');
+    var rows = document.querySelectorAll('#orderPaySection [data-action="order-select-pay"]');
+    for (var j = 0; j < rows.length; j++) {
+      if (rows[j].dataset.method === method) {
+        var radio = rows[j].querySelector('.pay-radio');
+        if (radio) radio.classList.add('checked');
+      }
+    }
+    state.selectedPayMethod = method;
+    state.selectedPayName = name;
+    var slideWrap = $('orderSlideWrap');
+    var btnWrap = $('orderPayBtnWrap');
+    var btnText = $('orderPayBtnText');
+    if (method === 'grippay') {
+      if (slideWrap) slideWrap.style.display = 'block';
+      if (btnWrap) btnWrap.style.display = 'none';
+      renderOrderGrippayCta();
+    } else {
+      if (slideWrap) slideWrap.style.display = 'none';
+      if (btnWrap) btnWrap.style.display = 'block';
+      if (btnText) btnText.textContent = (state.orderTotal || 0).toLocaleString() + '원 결제하기';
+    }
+  }
+
+  function renderOrderGrippayCta() {
+    var wrap = $('orderSlideWrap');
+    if (!wrap) return;
+    wrap.innerHTML =
+      '<button class="order-grippay-btn" data-action="order-grippay-pay">' +
+        '<span class="order-grippay-btn-logo">G</span>' +
+        '<span class="order-grippay-btn-text">' + (state.orderTotal || 0).toLocaleString() + '원 그립페이로 결제하기</span>' +
+      '</button>';
+  }
+
+  // ===== 빠른결제 (그립페이 전용 바텀시트) =====
+  function openFastPay() {
+    var p = state.currentProduct;
+    if (!p) return;
+    var qty = state.currentQty || 1;
+    var total = p.price * qty;
+    state.fastTotal = total;
+    $('fpProdName').textContent = p.name;
+    $('fpProdPrice').textContent = p.price.toLocaleString() + '원';
+    var originEl = $('fpProdOrigin');
+    if (originEl) originEl.textContent = (p.originPrice || 0).toLocaleString() + '원';
+    $('fpProdQty').textContent = qty + '개';
+    $('fpAmountFinal').textContent = total.toLocaleString() + '원';
+    $('fpPointEarn').textContent = Math.floor(total * 0.003) + 'P 적립예정';
+    var payBtnText = $('fpPayBtnText');
+    if (payBtnText) payBtnText.textContent = total.toLocaleString() + '원 그립페이로 결제하기';
+    renderFastPayGrippay();
+    closeAll();
+    $('stepFastPay').classList.add('active');
+    setTimeout(function() {
+      var b = document.querySelector('#stepFastPay .order-body');
+      if (b) b.scrollTop = 0;
+    }, 50);
+  }
+
+  function renderFastPayGrippay() {
+    var box = document.querySelector('#fpPaySection .pay-method-grippay');
+    var banner = document.querySelector('#fpPaySection .grippay-nudge-banner');
+    var cards = document.querySelector('#fpPaySection .pay-grippay-cards');
+    if (!cards) return;
+    if (state.hasCi) {
+      if (banner) banner.style.display = 'none';
+      if (box) box.classList.remove('strong-focus');
+      cards.innerHTML =
+        '<div class="pay-grippay-card-item shinhan-card">' +
+        '<div class="pay-grippay-card-logo">S</div>' +
+        '<div class="pay-grippay-card-name">신한카드</div>' +
+        '</div>' +
+        '<div class="pay-grippay-card-add" data-action="fastpay-register">' +
+        '<span class="pay-add-icon">+</span>' +
+        '<span class="pay-add-text">카드 또는 계좌<br>추가하기</span>' +
+        '</div>';
+    } else {
+      if (banner) banner.style.display = 'flex';
+      if (box) box.classList.add('strong-focus');
+      cards.innerHTML =
+        '<div class="pay-grippay-card-add full-width" data-action="fastpay-register">' +
+        '<span class="pay-add-icon">+</span>' +
+        '<span class="pay-add-text">카드 또는 계좌 추가하기</span>' +
+        '</div>';
+    }
+  }
+
+  function fastPayPay() {
+    if (!state.hasCi) {
+      showToast('그립페이 등록이 필요합니다');
+      setTimeout(function() { goStep(1); }, 800);
+    } else if (state.oneTouch) {
+      completePaymentDirect();
+    } else {
+      state.fromQuickOrder = true;
+      openPwSheet();
+    }
+  }
+
+  // ===== 퀵주문서 =====
+  function openQuickOrder() {
+    var p = state.currentProduct;
+    if (!p) return;
+    state.qoQty = state.currentQty;
+    $('qoProdName').textContent = p.name;
+    $('qoProdOrigin').textContent = p.originPrice.toLocaleString() + '원';
+    $('qoProdPrice').textContent = p.price.toLocaleString() + '원';
+    $('qoQty').textContent = state.qoQty;
+    updateQoTotal();
+    renderQuickOrderCta();
+    closeAll();
+    $('stepQuickOrder').classList.add('active');
+    setTimeout(function() {
+      var body = document.querySelector('#stepQuickOrder .qo-popup-body');
+      if (body) body.scrollTop = 0;
+    }, 50);
+  }
+
+  function renderQuickOrderCta() {
+    var wrap = $('qoSlideWrap');
+    if (!wrap) return;
+    if (state.oneTouch) {
+      wrap.innerHTML =
+        '<div class="qo-slide-track">' +
+          '<div class="qo-slide-handle" id="qoSlideHandle">' +
+            '<span class="qo-slide-arrow">»</span>' +
+          '</div>' +
+          '<div class="qo-slide-content">' +
+            '<div class="qo-slide-logo">G</div>' +
+            '<span class="qo-slide-text">밀어서 <strong>그립페이 결제하기</strong></span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="qo-other-pay" data-action="qo-other-pay" style="cursor:pointer;">다른 수단으로 결제</div>';
+      bindSlideHandle('qoSlideHandle', function() {
+        completePaymentDirect();
+      });
+    } else {
+      wrap.innerHTML =
+        '<button class="order-grippay-btn" data-action="qo-grippay-pay">' +
+          '<span class="order-grippay-btn-logo">G</span>' +
+          '<span class="order-grippay-btn-text">그립페이 빠른결제</span>' +
+        '</button>' +
+        '<div class="qo-other-pay" data-action="qo-other-pay" style="margin-top:14px;cursor:pointer;">다른 수단으로 결제</div>';
+    }
+  }
+  function qoQtyChange(d) {
+    state.qoQty = Math.max(1, Math.min(47, state.qoQty + d));
+    $('qoQty').textContent = state.qoQty;
+    updateQoTotal();
+  }
+  function updateQoTotal() {
+    var p = state.currentProduct;
+    var total = p.price * state.qoQty;
+    $('qoSubtotal').innerHTML = '상품 ' + total.toLocaleString() + '원 + 배송비 0원 = <strong>' + total.toLocaleString() + '원</strong>';
+    $('qoOrderTotal').textContent = total.toLocaleString() + '원';
+    $('qoFinalTotal').textContent = total.toLocaleString() + '원';
+  }
+
+  function bindSlideHandle(id, onComplete) {
+    var handle = $(id);
+    if (!handle) return;
+    var dragging = false, startX = 0, startLeft = 4, maxLeft = 0;
+    function getMax() { return handle.parentElement.offsetWidth - handle.offsetWidth - 8; }
+    function onStart(e) {
+      dragging = true;
+      maxLeft = getMax();
+      startX = e.touches ? e.touches[0].clientX : e.clientX;
+      startLeft = parseInt(handle.style.left || '4', 10);
+      handle.style.transition = 'none';
+    }
+    function onMove(e) {
+      if (!dragging) return;
+      e.preventDefault();
+      var x = e.touches ? e.touches[0].clientX : e.clientX;
+      var newLeft = Math.max(4, Math.min(maxLeft, startLeft + (x - startX)));
+      handle.style.left = newLeft + 'px';
+    }
+    function onEnd() {
+      if (!dragging) return;
+      dragging = false;
+      handle.style.transition = 'left 0.3s';
+      var cur = parseInt(handle.style.left || '4', 10);
+      if (cur >= maxLeft - 20) {
+        handle.style.left = maxLeft + 'px';
+        setTimeout(function(){
+          handle.style.left = '4px';
+          if (typeof onComplete === 'function') onComplete();
+          else { closeAll(); alert('✅ 결제 완료!'); }
+        }, 300);
+      } else {
+        handle.style.left = '4px';
+      }
+    }
+    handle.addEventListener('mousedown', onStart);
+    handle.addEventListener('touchstart', onStart, {passive: false});
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchmove', onMove, {passive: false});
+    document.addEventListener('mouseup', onEnd);
+    document.addEventListener('touchend', onEnd);
+  }
+
+  function clearOverOrder() {
+    var elems = document.querySelectorAll('.over-order');
+    for (var i = 0; i < elems.length; i++) elems[i].classList.remove('over-order');
+  }
+
+  // ===== 이벤트 위임 =====
+  document.addEventListener('click', function(e) {
+    var t = e.target;
+    while (t && t !== document.body) {
+      if (t.dataset && t.dataset.action) break;
+      t = t.parentNode;
+    }
+    if (!t || t === document.body) return;
+    var a = t.dataset.action;
+
+    if (a === 'goto') {
+      var step = t.dataset.step;
+      goStep(/^\d+$/.test(step) ? parseInt(step, 10) : step);
+    } else if (a === 'close-popup') { closeAll(); }
+    else if (a === 'close-all') { closeAll(); }
+    else if (a === 'start-pay') { startPayFlow(t.dataset.type); }
+    else if (a === 'proceed-after-kcp') { proceedAfterKcp(); }
+    else if (a === 'select-bank') { selectBank(t.dataset.bank); }
+    else if (a === 'toggle-term') { toggleTerm(t.dataset.term); }
+    else if (a === 'toggle-all-terms') { toggleAllTerms(); }
+    else if (a === 'proceed-verify') { proceedVerify(); }
+    else if (a === 'select-method') { selectMethod(t.dataset.method); }
+    else if (a === 'toggle-agree') { toggleAgree(); }
+    else if (a === 'toggle-kcp-term') { toggleKcpTerm(t.dataset.term); }
+    else if (a === 'toggle-kcp-all') { toggleKcpAll(); }
+    else if (a === 'proceed-kcp-terms') { proceedKcpTerms(); }
+    else if (a === 'pw-input') { pwInput(t.dataset.num); }
+    else if (a === 'pw-back') { pwBack(); }
+    else if (a === 'pw-clear') { pwClear(); }
+    else if (a === 'pw-submit') { pwSubmit(); }
+    else if (a === 'prod-tab') { switchTab(t.dataset.tab); }
+    else if (a === 'buy-product') { buyProduct(t.dataset.pay, t.dataset.name, t.dataset.price, t.dataset.order); }
+    else if (a === 'open-pd') { openProductDetail(t.dataset.pay, t.dataset.name, t.dataset.price, t.dataset.order); }
+    else if (a === 'close-product-detail') { closeAll(); openProducts(); }
+    else if (a === 'pd-add-to-cart') { pdAddToCart(); }
+    else if (a === 'pd-buy-now') { pdBuyNow(); }
+    else if (a === 'close-option') { closeAll(); openProducts(); }
+    else if (a === 'qty-minus') { qtyChange(-1); }
+    else if (a === 'qty-plus') { qtyChange(1); }
+    else if (a === 'add-to-cart') { addToCart(); }
+    else if (a === 'cart-remove') { removeFromCart(parseInt(t.dataset.idx, 10)); }
+    else if (a === 'lo-qty-minus') { loQtyChange(parseInt(t.dataset.idx, 10), -1); }
+    else if (a === 'lo-qty-plus') { loQtyChange(parseInt(t.dataset.idx, 10), 1); }
+    else if (a === 'cart-order') { orderFromCart(); }
+    else if (a === 'cart-grippay-pay') { cartGrippayPay(); }
+    else if (a === 'cart-other-pay') { orderFromCart(); }
+    else if (a === 'buy-now') {
+      var bp = state.currentProduct;
+      if (bp && bp.payType === 'grippay' && bp.orderType === 'quick') {
+        openFastPay();
+      } else {
+        addToCart();
+      }
+    }
+    else if (a === 'fastpay-pay') { fastPayPay(); }
+    else if (a === 'fastpay-register') { goStep(1); }
+    else if (a === 'fastpay-other-pay') { closeAll(); openOrderSheet(false, 'kakao'); }
+    else if (a === 'close-fastpay') { closeAll(); }
+    else if (a === 'open-cart-snackbar') { openCartFromSnackbar(); }
+    else if (a === 'oneclick-pay') { oneclickPay(); }
+    else if (a === 'grippay-register-from-order') {
+      $('step1').classList.add('active');
+      $('step1').classList.add('over-order');
+    } else if (a === 'order-select-pay') {
+      selectOrderPayMethod(t.dataset.method, t.dataset.payName);
+    } else if (a === 'order-grippay-pay') {
+      if (!state.hasCi) {
+        showToast('그립페이 등록이 필요합니다');
+        setTimeout(function() {
+          $('step1').classList.add('active');
+          $('step1').classList.add('over-order');
+        }, 800);
+      } else if (state.oneTouch) {
+        completeOrderPayment();
+      } else {
+        state.fromOrderSheet = true;
+        openPwSheet();
+      }
+    } else if (a === 'pw-sheet-input') { pwSheetInput(t.dataset.num); }
+    else if (a === 'pw-sheet-back') { pwSheetBack(); }
+    else if (a === 'pw-sheet-clear') { pwSheetClear(); }
+    else if (a === 'pw-sheet-submit') { pwSheetSubmit(); }
+    else if (a === 'close-pw-sheet') { closePwSheet(); }
+    else if (a === 'toggle-pw-quickpay') { togglePwQuickPay(); }
+    else if (a === 'order-pay-now') {
+      var p = state.currentProduct;
+      if (p) $('payCompleteProd').textContent = p.name;
+      var methodEl = document.querySelector('#stepPayComplete .pay-complete-value');
+      if (methodEl) methodEl.textContent = state.selectedPayName || '일반결제';
+      var mRows = document.querySelectorAll('#stepPayComplete .pay-complete-row');
+      if (mRows[1]) {
+        var mv = mRows[1].querySelector('.pay-complete-value');
+        if (mv) mv.textContent = state.selectedPayName || '일반결제';
+      }
+      $('payCompleteAmount').textContent = (state.orderTotal || 0).toLocaleString() + '원';
+      closeAll();
+      $('stepPayComplete').classList.add('active');
+    } else if (a === 'close-pay-complete') { closeAll(); }
+    else if (a === 'close-quick-order') {
+      closeAll();
+      $('stepOption').classList.add('active');
+    } else if (a === 'qo-grippay-pay') {
+      if (!state.hasCi) {
+        showToast('그립페이 등록이 필요합니다');
+        setTimeout(function() {
+          goStep(1);
+        }, 800);
+      } else if (state.oneTouch) {
+        completePaymentDirect();
+      } else {
+        state.fromQuickOrder = true;
+        openPwSheet();
+      }
+    } else if (a === 'qo-other-pay') {
+      closeAll();
+      openOrderSheet(false, 'kakao');
+    } else if (a === 'qo-qty-minus') { qoQtyChange(-1); }
+    else if (a === 'qo-qty-plus') { qoQtyChange(1); }
+    else if (a === 'complete-flow') {
+      state.hasCi = true;
+      syncGrippayUI();
+      clearOverOrder();
+      if (isOrderActive()) {
+        refreshOrderGrippay();
+        closeAllExceptOrder();
+      } else {
+        closeAll();
+      }
+    } else if (a === 'resend-kcb') {
+      alert('인증번호가 재발송되었습니다.');
+    }
+  });
+
+  // ===== 초기 바인딩 =====
+  function init() {
+    var ciBtn = $('ciToggle');
+    if (ciBtn) ciBtn.addEventListener('click', function(e) { e.stopPropagation(); e.preventDefault(); toggleCi(); });
+
+    var card = $('grippayCard');
+    if (card) card.addEventListener('click', function() { goStep(1); });
+
+    var swBtn = $('grippayStatusToggle');
+    if (swBtn) swBtn.addEventListener('click', function(e) { e.stopPropagation(); e.preventDefault(); toggleCi(); });
+    var swLabel = $('grippayStatusText');
+    if (swLabel) swLabel.addEventListener('click', function(e) { e.stopPropagation(); e.preventDefault(); toggleCi(); });
+
+    var oneTouchBtn = $('oneTouchToggle');
+    if (oneTouchBtn) oneTouchBtn.addEventListener('click', function(e) { e.stopPropagation(); e.preventDefault(); toggleOneTouch(); });
+    var oneTouchLabel = $('oneTouchText');
+    if (oneTouchLabel) oneTouchLabel.addEventListener('click', function(e) { e.stopPropagation(); e.preventDefault(); toggleOneTouch(); });
+
+    var openProductsBtn = $('openProductsBtn');
+    if (openProductsBtn) openProductsBtn.addEventListener('click', openProducts);
+
+    var pwQuickPaySwitch = $('pwQuickPaySwitch');
+    if (pwQuickPaySwitch) pwQuickPaySwitch.addEventListener('click', function(e) { e.stopPropagation(); e.preventDefault(); togglePwQuickPay(); });
+
+    var restartBtn = $('restartBtn');
+    if (restartBtn) restartBtn.addEventListener('click', function() { closeAll(); });
+
+    syncGrippayUI();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
