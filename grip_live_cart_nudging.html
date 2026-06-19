@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>그립 라이브커머스 - 넛징 UI 8 Cases</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{min-height:100vh;background:#111;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:flex;flex-direction:column;align-items:center;padding:16px 0}
+
+/* ── 애니메이션 ── */
+@keyframes floatUp{0%{opacity:0;transform:translateY(8px) scale(.85)}12%{opacity:1;transform:translateY(0) scale(1)}65%{opacity:1;transform:translateY(-48px) scale(1)}100%{opacity:0;transform:translateY(-72px) scale(.6)}}
+@keyframes arrowRise{0%{opacity:0;transform:translateY(8px) scale(.75)}10%{opacity:1;transform:translateY(0) scale(1.06)}14%{transform:translateY(0) scale(1)}62%{opacity:1;transform:translateY(-52px) scale(1)}100%{opacity:0;transform:translateY(-80px) scale(.65)}}
+@keyframes miniArrow{0%{opacity:0;transform:translateY(4px)}14%{opacity:.35;transform:translateY(0)}68%{opacity:.35;transform:translateY(-32px)}100%{opacity:0;transform:translateY(-46px)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-2px)}40%{transform:translateX(2px)}60%{transform:translateX(-1.5px)}80%{transform:translateX(1.5px)}}
+@keyframes bounce{0%{transform:translateY(3px);opacity:0}50%{transform:translateY(-1.5px);opacity:1}100%{transform:translateY(0);opacity:1}}
+@keyframes heartFloat{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-60px) scale(.5)}}
+@keyframes urgentGlow{0%,100%{box-shadow:0 0 0 0 rgba(255,0,0,0),0 2px 12px rgba(0,0,0,.12)}50%{box-shadow:0 0 0 3px rgba(255,0,0,.25),0 2px 16px rgba(255,0,0,.15)}}
+@keyframes urgentShake{0%,100%{transform:translateX(0)}10%{transform:translateX(-1.5px)}20%{transform:translateX(1.5px)}30%{transform:translateX(-1px)}40%{transform:translateX(1px)}50%{transform:translateX(0)}}
+@keyframes countdownPop{0%{transform:scale(1)}15%{transform:scale(1.25)}30%{transform:scale(1)}}
+@keyframes urgentSlide{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes fireFlicker{0%{transform:translateY(0) scale(1);opacity:.9}50%{transform:translateY(-2px) scale(1.15);opacity:1}100%{transform:translateY(0) scale(1);opacity:.9}}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes popIn{0%{transform:scale(0);opacity:0}60%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+@keyframes hotPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,77,79,.15)}50%{box-shadow:0 0 0 3px rgba(255,77,79,.06)}}
+@keyframes cartBounce{0%{transform:translateY(0)}50%{transform:translateY(-2px)}100%{transform:translateY(0)}}
+@keyframes rankSlide{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes cartFloat{0%{opacity:0;transform:translateY(6px) scale(.8)}10%{opacity:1;transform:translateY(0) scale(1)}60%{opacity:1;transform:translateY(-44px) scale(1)}100%{opacity:0;transform:translateY(-68px) scale(.6)}}
+@keyframes cartWiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-8deg)}75%{transform:rotate(8deg)}}
+@keyframes progressGrow{from{width:0}to{width:var(--target-w)}}
+@keyframes nudgePop{0%{transform:scale(.9);opacity:0}50%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+@keyframes cartRing{0%{transform:scale(1)}20%{transform:scale(1.15)}40%{transform:scale(1)}60%{transform:scale(1.1)}100%{transform:scale(1)}}
+
+/* ── 레이아웃 ── */
+.header{width:100%;max-width:460px;padding:0 16px;margin-bottom:10px}
+.header h1{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.4px;margin-bottom:2px}
+.header p{font-size:12px;color:#666}
+.cat-label{width:100%;max-width:460px;padding:0 16px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.cat-label span{font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px}
+.cat-label .cat-buy{background:#FF4D4F;color:#fff}
+.cat-label .cat-cart{background:#FF6B00;color:#fff}
+.cat-label em{font-size:11px;color:#666;font-style:normal}
+.tabs{display:flex;gap:5px;margin-bottom:10px;padding:0 16px;width:100%;max-width:460px;overflow-x:auto}
+.tab{background:#1c1c1c;color:#888;border:1px solid #2a2a2a;border-radius:16px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .2s;flex-shrink:0}
+.tab.active-red{background:#FF4D4F;color:#fff;border-color:#FF4D4F}
+.tab.active-orange{background:#FF6B00;color:#fff;border-color:#FF6B00}
+
+/* ── 폰 프레임 ── */
+.phone{width:440px;height:720px;border-radius:24px;background:#000;position:relative;overflow:visible;box-shadow:0 8px 40px rgba(0,0,0,.6);border:2px solid #222}
+.phone-bg{position:absolute;inset:0;border-radius:22px;overflow:hidden;background:linear-gradient(170deg,#2a3a52 0%,#1a2438 40%,#141c2d 100%)}
+
+/* ── 설명 ── */
+.desc-wrap{width:100%;max-width:440px;margin-top:16px;padding:0 4px}
+.desc-card{background:#1a1a1a;border-radius:14px;padding:14px;border:1px solid #262626}
+.desc-title{font-size:14px;font-weight:700;color:#fff;margin-bottom:4px}
+.desc-sub{font-size:12px;color:#888;line-height:1.5;margin-bottom:10px}
+.desc-detail{background:#111;border-radius:8px;padding:10px 12px;font-size:11px;color:#aaa;line-height:1.7}
+
+/* ── 스토어 팝업 ── */
+.store-overlay{position:absolute;inset:0;z-index:50;border-radius:22px;overflow:hidden;display:none}
+.store-overlay.open{display:block}
+.store-dim{position:absolute;inset:0;background:rgba(0,0,0,.55);animation:fadeIn .2s ease-out}
+.store-sheet{position:absolute;bottom:0;left:0;right:0;max-height:88%;background:#fff;border-radius:16px 16px 0 0;animation:slideUp .35s cubic-bezier(.32,.72,.37,1.1);display:flex;flex-direction:column}
+.store-handle{width:36px;height:4px;border-radius:2px;background:#ddd;margin:10px auto 0}
+.store-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 0}
+.store-htabs{display:flex;gap:0}
+.store-htab{padding:8px 0;margin-right:16px;font-size:13px;font-weight:700;color:#ccc;cursor:pointer;border:none;background:none;position:relative}
+.store-htab.active{color:#111}
+.store-htab.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2.5px;background:#FF4D4F;border-radius:1px}
+.store-htab .cnt{font-size:12px;font-weight:600;color:#FF4D4F;margin-left:3px}
+.store-close{width:28px;height:28px;border-radius:50%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;border:none;color:#666}
+.store-list{flex:1;overflow-y:auto;padding:0}
+.si{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-bottom:1px solid #f5f5f5;position:relative;transition:background .15s}
+.si:last-child{border-bottom:none}
+.si-thumb{width:72px;height:72px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.si-thumb-badge{position:absolute;top:0;left:0;background:#FF4D4F;color:#fff;font-size:8px;font-weight:700;padding:2px 5px;border-radius:0 0 6px 0}
+.si-info{flex:1;min-width:0;padding-top:2px}
+.si-name{font-size:12px;color:#333;line-height:1.4;margin-bottom:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.si-prices{display:flex;align-items:center;gap:5px;margin-bottom:3px}
+.si-orig{font-size:10px;color:#bbb;text-decoration:line-through}
+.si-sale{font-size:14px;font-weight:800;color:#111}
+.si-live{display:inline-block;background:#FFE8EC;color:#FF4D6A;font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;margin-left:3px}
+.si-badges{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px}
+.si-buy{background:none;border:1px solid #eee;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:#FF4D4F;cursor:pointer;flex-shrink:0;align-self:center}
+.si.hot-row{background:#FFFAFA}
+.si.cart-row{background:#FFFCF5}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>라이브 넛징 UI · 8 Cases</h1>
+  <p>구매 넛징 5 + 장바구니 넛징 3 · 라이브 상품카드 + 스토어 팝업 동시 적용</p>
+</div>
+
+<!-- 구매 넛징 탭 -->
+<div class="cat-label"><span class="cat-buy">구매 넛징</span><em>상품카드 내 구매 사회적 증거</em></div>
+<div class="tabs" id="tabs-buy"></div>
+
+<!-- 장바구니 넛징 탭 -->
+<div class="cat-label"><span class="cat-cart">장바구니 넛징</span><em>장바구니 담기 전환 유도</em></div>
+<div class="tabs" id="tabs-cart"></div>
+
+<!-- 폰 프레임 -->
+<div class="phone">
+  <div class="phone-bg"></div>
+
+  <!-- 상단 헤더 -->
+  <div style="position:absolute;top:0;left:0;right:0;z-index:10;padding:12px 14px 8px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,rgba(0,0,0,.5) 0%,transparent 100%)">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#FF9A8B,#FF6B6B);display:flex;align-items:center;justify-content:center;font-size:16px;border:2px solid rgba(255,255,255,.2)">🧑‍🌾</div>
+      <div>
+        <div style="display:flex;align-items:center;gap:4px"><span style="color:#fff;font-size:13px;font-weight:700">포계절과일가게</span><span style="font-size:10px">💛</span></div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:1px"><span style="color:rgba(255,255,255,.7);font-size:10px">♥ 2.6만</span><span style="color:rgba(255,255,255,.7);font-size:10px">👁 85</span></div>
+      </div>
+      <button style="background:#FF4D6A;color:#fff;border:none;border-radius:12px;padding:3px 10px;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px">팔로우</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="color:rgba(255,255,255,.7);font-size:16px">🔊</span>
+      <span style="color:rgba(255,255,255,.7);font-size:16px">↗</span>
+      <span style="color:rgba(255,255,255,.7);font-size:16px">✕</span>
+    </div>
+  </div>
+
+  <!-- 방송 제목 -->
+  <div style="position:absolute;top:64px;left:14px;right:14px;z-index:10">
+    <div style="color:#fff;font-size:12px;font-weight:600;margin-bottom:6px;text-shadow:0 1px 3px rgba(0,0,0,.5)">LIVE 긴급세일! 인기 과일세트 초특가</div>
+    <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.45);border-radius:12px;padding:3px 10px">
+      <span style="font-size:12px">🎯</span>
+      <div style="width:80px;height:4px;border-radius:2px;background:rgba(255,255,255,.2);overflow:hidden"><div style="width:84%;height:100%;border-radius:2px;background:#FF4D4F"></div></div>
+      <span style="color:rgba(255,255,255,.8);font-size:9px;font-weight:600">42000/50000</span>
+    </div>
+  </div>
+
+  <!-- 채팅 -->
+  <div style="position:absolute;bottom:136px;left:10px;right:80px;display:flex;flex-direction:column;gap:4px;z-index:5">
+    <div style="background:rgba(255,215,0,.12);border-radius:8px;padding:6px 8px;border:1px solid rgba(255,215,0,.2);margin-bottom:2px">
+      <div style="font-size:9px;color:#FFD700;font-weight:600;line-height:1.5">🎁 백화점납품 수박5kg 상품이 게임 당첨자의 장바구니에 담겼어요.</div>
+    </div>
+    <div style="display:flex;gap:4px"><span style="color:#FFD700;font-size:11px;font-weight:700">공치옹</span><span style="color:rgba(255,255,255,.85);font-size:11px">간맛보고 탈출</span></div>
+    <div style="display:flex;gap:4px"><span style="color:#FFD700;font-size:11px;font-weight:700">Liel_Aren</span><span style="color:rgba(255,255,255,.85);font-size:11px">구럴거같음~~</span></div>
+    <div style="display:flex;gap:4px"><span style="color:#FFD700;font-size:11px;font-weight:700">공치옹</span><span style="color:rgba(255,255,255,.85);font-size:11px">조카사위 그립 하려고 ㅎㅎ</span></div>
+  </div>
+
+  <!-- 플로팅 하트 -->
+  <div style="position:absolute;bottom:70px;right:12px;pointer-events:none">
+    <div style="position:absolute;bottom:0;right:0;animation:heartFloat 2.5s ease-out 0s infinite;opacity:0;font-size:18px">💗</div>
+    <div style="position:absolute;bottom:0;right:6px;animation:heartFloat 2.5s ease-out .8s infinite;opacity:0;font-size:18px">💗</div>
+  </div>
+
+  <!-- 상품카드 영역 -->
+  <div id="card-area" style="position:absolute;bottom:44px;left:0;right:0;z-index:10"></div>
+
+  <!-- 스토어 팝업 -->
+  <div class="store-overlay" id="store-overlay">
+    <div class="store-dim" onclick="closeStore()"></div>
+    <div class="store-sheet">
+      <div class="store-handle"></div>
+      <div class="store-header">
+        <div class="store-htabs">
+          <button class="store-htab active" data-tab="sale" onclick="switchST('sale')">판매상품<span class="cnt">10</span></button>
+          <button class="store-htab" data-tab="cart" onclick="switchST('cart')">장바구니<span class="cnt">23</span></button>
+        </div>
+        <button class="store-close" onclick="closeStore()">✕</button>
+      </div>
+      <div style="height:1px;background:#f0f0f0"></div>
+      <div class="store-list" id="store-list"></div>
+    </div>
+  </div>
+
+  <!-- 하단 네비 -->
+  <div style="position:absolute;bottom:0;left:0;right:0;z-index:10;height:44px;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-top:1px solid rgba(255,255,255,.08);border-radius:0 0 22px 22px">
+    <div onclick="openStore()" style="display:flex;align-items:center;gap:4px;cursor:pointer">
+      <span style="font-size:16px">🛒</span>
+      <span style="color:rgba(255,255,255,.8);font-size:10px;font-weight:600">스토어</span>
+      <span style="background:#FF4D4F;color:#fff;font-size:8px;font-weight:700;padding:1px 4px;border-radius:6px;margin-left:2px">25</span>
+    </div>
+    <div style="flex:1;margin:0 12px;background:rgba(255,255,255,.1);border-radius:16px;padding:6px 12px;color:rgba(255,255,255,.4);font-size:11px">메시지 입력</div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="text-align:center;cursor:pointer;position:relative"><span style="font-size:16px">🎟</span><span style="position:absolute;top:-4px;right:-6px;background:#FF4D4F;color:#fff;font-size:7px;font-weight:700;padding:1px 3px;border-radius:4px">4</span><div style="color:rgba(255,255,255,.6);font-size:8px">쿠폰</div></div>
+      <div style="text-align:center;cursor:pointer"><span style="font-size:16px">♥</span><div style="color:rgba(255,255,255,.6);font-size:8px">2.8만</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 설명 -->
+<div class="desc-wrap">
+  <div class="desc-card">
+    <div class="desc-title" id="desc-title"></div>
+    <div class="desc-sub" id="desc-sub"></div>
+    <div class="desc-detail" id="desc-detail"></div>
+  </div>
+</div>
+
+<script>
+// ═══ 케이스 정의 ═══
+const BUY_CASES = [
+  {id:"c1",label:"Case 1",title:"실시간 구매 카운트",desc:"카드 내 N명 구매중 뱃지 + 우측 숫자 버블 UP",
+   detail:'<strong style="color:#FF4D4F">카드 내부:</strong> ● 라이브닷 + N명 구매중 뱃지<br><strong style="color:#FF4D4F">카드 우측:</strong> +N, UP! 버블 상승<br><strong style="color:#FF4D4F">스토어:</strong> 판매 TOP3 메달 + N명 구매 뱃지<br><strong style="color:#888">효과:</strong> 실시간 구매 흐름 인지 → 신뢰 기반 전환'},
+  {id:"c2",label:"Case 2",title:"구매 급증 알림",desc:"임계값 돌파 시 인기폭발 강조 + 우측 🔥 파티클",
+   detail:'<strong style="color:#FF6B00">카드 내부:</strong> 30명 돌파 시 그라데이션 + 흔들림<br><strong style="color:#FF6B00">카드 우측:</strong> 🔥 인기급상승 버블<br><strong style="color:#888">효과:</strong> 임계값 기반 FOMO → 구매 집중 타이밍'},
+  {id:"c3",label:"Case 3",title:"최근 구매자 흐름",desc:"OO님 방금 구매 롤링 + 우측 프로필 버블",
+   detail:'<strong style="color:#7C3AED">카드 내부:</strong> OO님 방금 구매! 롤링<br><strong style="color:#7C3AED">카드 우측:</strong> 이모지 프로필 버블<br><strong style="color:#888">효과:</strong> 개인화된 사회적 증거 → 공감 & 동조'},
+  {id:"c4",label:"Case 4",title:"재고 연동 긴급감",desc:"잔여 프로그레스바 + 우측 품절임박 버블",
+   detail:'<strong style="color:#DC2626">카드 내부:</strong> 잔여 프로그레스바 + 품절 경고<br><strong style="color:#DC2626">카드 우측:</strong> 서둘러요, 품절임박 버블<br><strong style="color:#888">효과:</strong> 희소성 + 사회적 증거 → 즉시 구매 압박'},
+  {id:"c5",label:"Case 5",title:"화살표 구매 UP",desc:"↑ 화살표 + N명 구매 태그 연속 상승 애니메이션",
+   detail:'<strong style="color:#FF4D4F">카드 내부:</strong> ↑아이콘 + N명 구매중 + UP 바운스<br><strong style="color:#FF4D4F">카드 우측:</strong> ↑화살표 + N명 구매 태그 연속 상승<br><strong style="color:#888">효과:</strong> 상승 모멘텀 → "나도 올라타야" 동조'},
+];
+
+const CART_CASES = [
+  {id:"ca",label:"Case A",title:"실시간 장바구니 담기 동조",desc:"N명이 장바구니에 담는중 + 우측 🛒 담기 버블 떠오름",
+   detail:'<strong style="color:#FF6B00">카드 내부:</strong> 🛒 아이콘 + "N명이 담는중" 오렌지 뱃지, 라이브닷 깜빡임으로 실시간성 강조<br><strong style="color:#FF6B00">카드 우측:</strong> "🛒 +1 담김", "담기 급증!" 버블이 위로 떠오름<br><strong style="color:#FF6B00">스토어:</strong> 장바구니 TOP3에 "N명 담는중" 바운스 뱃지 + 오렌지 행 하이라이트<br><strong style="color:#888">고객 심리:</strong> "이렇게 많이 담고 있으면 좋은 거겠지" → 탐색 단축<br><strong style="color:#888">셀러 효과:</strong> 담기 수 데이터만 연동하면 자동 작동, 구매 전 단계 전환율 향상'},
+  {id:"cb",label:"Case B",title:"장바구니 → 구매 전환 쪼기",desc:"N명이 담고 아직 안 샀어요! + 우측 카운트다운 쪼기 버블",
+   detail:'<strong style="color:#FF6B00">카드 내부:</strong> "🛒 N명 담음 → 구매 N명" 전환율 프로그레스 바 형태로 표시, 빈 구간이 "아직 안 산 사람" 강조<br><strong style="color:#FF6B00">카드 우측:</strong> "아직 안 샀어요!", "지금 사면 할인!" 버블이 쪼는 느낌으로 떠오름<br><strong style="color:#FF6B00">스토어:</strong> 장바구니 많이 담긴 상품에 "담기만 N명 — 지금 구매하세요" 전환 유도 뱃지<br><strong style="color:#888">고객 심리:</strong> "나도 담아놓고 안 샀는데... 놓치면 안 되겠다" → 미결제 장바구니 구매 전환<br><strong style="color:#888">셀러 효과:</strong> 장바구니 이탈자 재전환, 라이브 중 실시간 구매 전환율 극대화'},
+  {id:"cc",label:"Case C",title:"인기 급상승 장바구니 알림",desc:"지금 가장 많이 담기는 상품 🔥 + 우측 트렌드 애니메이션",
+   detail:'<strong style="color:#FF6B00">카드 내부:</strong> "📈 지금 가장 많이 담기는 중!" 트렌드 뱃지, 분당 담기 수 변화율 기반<br><strong style="color:#FF6B00">카드 우측:</strong> "📈 급상승!", "HOT 담기" 트렌드 버블 + 그래프 모양 미니 SVG 떠오름<br><strong style="color:#FF6B00">스토어:</strong> 급상승 상품에 "📈 담기 급증" 뱃지 + 담기 수 차트 미니바<br><strong style="color:#888">고객 심리:</strong> "지금 핫한 상품이구나" → 트렌드 동조, 탐색 없이 바로 담기<br><strong style="color:#888">셀러 효과:</strong> 실시간 트렌드가 자동 노출되어 셀러 멘트 없이도 인기상품 부각'},
+];
+
+const ALL_CASES = [...BUY_CASES, ...CART_CASES];
+const NAMES = ["민지","수현","재원","하늘","은서","지호"];
+let active = "c1", count = 14, stock = 18, cartCount = 47, nameIdx = 0;
+
+// ═══ 탭 렌더 ═══
+function buildTabs(containerId, cases, colorClass) {
+  const el = document.getElementById(containerId);
+  cases.forEach(c => {
+    const btn = document.createElement("button");
+    btn.className = "tab" + (c.id === active ? ` ${colorClass}` : "");
+    btn.textContent = c.label;
+    btn.dataset.id = c.id;
+    btn.onclick = () => { active = c.id; count=14; stock=18; cartCount=47; updateAllTabs(); render(); };
+    el.appendChild(btn);
+  });
+}
+buildTabs("tabs-buy", BUY_CASES, "active-red");
+buildTabs("tabs-cart", CART_CASES, "active-orange");
+
+function updateAllTabs() {
+  document.querySelectorAll("#tabs-buy .tab").forEach(b => {
+    b.className = "tab" + (b.dataset.id === active ? " active-red" : "");
+  });
+  document.querySelectorAll("#tabs-cart .tab").forEach(b => {
+    b.className = "tab" + (b.dataset.id === active ? " active-orange" : "");
+  });
+}
+
+// ═══ 메인 렌더 (상품카드) ═══
+function render() {
+  const area = document.getElementById("card-area");
+  const isCritical = stock < 10;
+  const stockPct = Math.max(0, Math.min(100, (stock/200)*100));
+  const isLow = stockPct < 25;
+  const cartBuyRate = Math.round((count / cartCount) * 100);
+
+  // 긴급바
+  const urgentBar = isCritical ? `<div style="display:flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(90deg,#DC2626,#FF4D4F,#DC2626);animation:urgentSlide .4s ease-out;border-radius:8px 8px 0 0;padding:4px 10px;margin-bottom:-2px;position:relative;z-index:2"><span style="font-size:11px;animation:fireFlicker .6s infinite">🔥</span><span style="color:#fff;font-size:10px;font-weight:800">마감임박</span><span style="background:#fff;color:#DC2626;font-size:11px;font-weight:900;padding:1px 6px;border-radius:4px;animation:countdownPop .8s infinite">${stock}</span><span style="color:rgba(255,255,255,.9);font-size:10px;font-weight:700">개 남음!</span><span style="width:5px;height:5px;border-radius:50%;background:#fff;animation:blink .8s infinite"></span></div>` : "";
+
+  const cardAnim = isCritical ? "urgentGlow 1.5s ease-in-out infinite,urgentShake 3s ease-in-out infinite" : "none";
+  const cardBorder = isCritical ? "1.5px solid rgba(220,38,38,.35)" : "none";
+  const cardRadius = isCritical ? "0 0 10px 10px" : "10px";
+  const edgeLine = isCritical ? '<div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,#FF4D4F,#DC2626);animation:pulse .8s infinite"></div>' : "";
+  const thumbBg = isCritical?"rgba(220,38,38,.95)":(isLow?"rgba(220,38,38,.88)":"rgba(0,0,0,.55)");
+  const thumbTxt = isCritical?`🚨 ${stock}개!`:(isLow?`잔여 ${stock}개!`:`재고 ${stock}개`);
+  const thumbAni = isCritical?"animation:pulse .6s infinite;":"";
+
+  // ── 넛징 (카드 내부) ──
+  let nudge = "";
+  // 구매 넛징
+  if (active==="c1") nudge = `<div style="display:flex;align-items:center;gap:4px;animation:fadeUp .3s"><span style="display:inline-flex;align-items:center;gap:3px;background:#FFF0F0;color:#FF4D4F;font-size:10px;font-weight:700;padding:1.5px 7px;border-radius:8px"><span style="width:5px;height:5px;border-radius:50%;background:#FF4D4F;animation:pulse 1.2s infinite"></span>${count}명 구매중</span></div>`;
+  else if (active==="c2") { const h=count>30; nudge = `<div style="display:flex;align-items:center;gap:4px;animation:${h?"shake .4s":"fadeUp .3s"}"><span style="display:inline-flex;align-items:center;gap:3px;background:${h?"linear-gradient(90deg,#FF6B00,#FF4D4F)":"#FFF5EB"};color:${h?"#fff":"#FF6B00"};font-size:10px;font-weight:700;padding:1.5px 7px;border-radius:8px">${h?"🔥":"📈"} ${h?`인기폭발! ${count}명`:`${count}명 구매중`}</span></div>`; }
+  else if (active==="c3") nudge = `<div style="overflow:hidden;height:16px;animation:fadeUp .3s"><div style="display:flex;align-items:center;gap:3px"><div style="width:12px;height:12px;border-radius:50%;background:#E8DEFF;display:flex;align-items:center;justify-content:center;font-size:7px">😊</div><span style="font-size:10px;color:#7C3AED;font-weight:600">${NAMES[nameIdx]}님 방금 구매!</span><span style="font-size:9px;color:#aaa">외 ${count}명</span></div></div>`;
+  else if (active==="c4") { const bg=isLow?"linear-gradient(90deg,#DC2626,#FF4D4F)":"linear-gradient(90deg,#6DBF47,#A8E06C)"; nudge = `<div style="animation:fadeUp .3s"><div style="font-size:10px;font-weight:700;color:${isLow?"#DC2626":"#666"};margin-bottom:2px">${isLow?`⚡ 거의 품절! ${stock}개 남음`:`재고 ${stock}개`}</div><div style="width:100%;height:3.5px;border-radius:2px;background:#f0f0f0;overflow:hidden"><div style="width:${stockPct}%;height:100%;border-radius:2px;background:${bg};transition:width .5s;${isLow?"animation:pulse 1s infinite":""}"></div></div></div>`; }
+  else if (active==="c5") nudge = `<div style="display:flex;align-items:center;gap:4px;animation:fadeUp .3s"><span style="display:inline-flex;align-items:center;gap:3px;background:#FFF0F0;color:#FF4D4F;font-size:10px;font-weight:700;padding:1.5px 7px;border-radius:8px"><svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M5 1L2 5h2v4h2V5h2L5 1z" fill="#FF4D4F"/></svg>${count}명 구매중</span><span style="font-size:9px;color:#FF4D4F;font-weight:700;animation:bounce .5s">UP</span></div>`;
+  // 장바구니 넛징
+  else if (active==="ca") nudge = `<div style="display:flex;align-items:center;gap:4px;animation:nudgePop .4s ease-out"><span style="display:inline-flex;align-items:center;gap:3px;background:#FFF5EB;color:#FF6B00;font-size:10px;font-weight:700;padding:1.5px 7px;border-radius:8px"><span style="font-size:10px;animation:cartWiggle 1.5s infinite">🛒</span><span style="width:5px;height:5px;border-radius:50%;background:#FF6B00;animation:pulse 1s infinite"></span>${cartCount}명이 담는중</span></div>`;
+  else if (active==="cb") {
+    nudge = `<div style="animation:nudgePop .4s ease-out">
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">
+        <span style="font-size:10px;font-weight:700;color:#FF6B00">🛒 ${cartCount}명 담음</span>
+        <span style="font-size:9px;color:#aaa">→</span>
+        <span style="font-size:10px;font-weight:700;color:#FF4D4F">구매 ${count}명</span>
+      </div>
+      <div style="width:100%;height:4px;border-radius:2px;background:#FFF0E6;overflow:hidden;position:relative">
+        <div style="width:100%;height:100%;border-radius:2px;background:#FFE0C2"></div>
+        <div style="position:absolute;left:0;top:0;width:${cartBuyRate}%;height:100%;border-radius:2px;background:linear-gradient(90deg,#FF6B00,#FF4D4F);transition:width .5s"></div>
+      </div>
+      <div style="font-size:9px;color:#FF6B00;font-weight:600;margin-top:2px;animation:pulse 1.5s infinite">${cartCount - count}명 아직 안 샀어요!</div>
+    </div>`;
+  }
+  else if (active==="cc") nudge = `<div style="display:flex;align-items:center;gap:4px;animation:nudgePop .4s ease-out"><span style="display:inline-flex;align-items:center;gap:3px;background:linear-gradient(90deg,#FFF5EB,#FFE8D6);color:#FF6B00;font-size:10px;font-weight:700;padding:1.5px 7px;border-radius:8px">📈 지금 가장 많이 담기는중!</span><span style="font-size:9px;color:#FF6B00;font-weight:700;animation:bounce .6s">HOT</span></div>`;
+
+  // ── 우측 바깥 애니메이션 ──
+  let outside = "";
+  function bbl(text,delay,color="#FF4D4F") { return `<div style="position:absolute;right:-68px;bottom:${16+delay*26}px;animation:floatUp 2.4s ease-out ${delay*.7}s infinite;opacity:0;pointer-events:none"><div style="background:${color};color:#fff;font-size:10px;font-weight:700;padding:3px 7px;border-radius:16px;white-space:nowrap;box-shadow:0 2px 6px ${color}55">${text}</div></div>`; }
+  function cartBbl(text,delay) { return `<div style="position:absolute;right:-68px;bottom:${16+delay*26}px;animation:cartFloat 2.6s ease-out ${delay*.8}s infinite;opacity:0;pointer-events:none"><div style="background:#FF6B00;color:#fff;font-size:10px;font-weight:700;padding:3px 7px;border-radius:16px;white-space:nowrap;box-shadow:0 2px 6px rgba(255,107,0,.4)">${text}</div></div>`; }
+
+  if (active==="c1") outside = bbl(`+${count}`,0)+bbl("UP!",1)+bbl(`${count+3}명`,2);
+  else if (active==="c2"&&count>20) outside = bbl("🔥 UP!",0,"#FF6B00")+bbl("인기급상승",1,"#FF6B00")+bbl(`${count}명!`,2,"#FF6B00");
+  else if (active==="c3") outside = bbl("😊 구매완료",0,"#7C3AED")+bbl("👋 또 구매!",1,"#7C3AED")+bbl("💜 감사해요",2,"#7C3AED");
+  else if (active==="c4") outside = bbl(isLow?"⚡ 서둘러요":`${stock}개 남음`,0,"#DC2626")+bbl("품절임박!",1,"#DC2626");
+  else if (active==="c5") {
+    const ai=[{n:count,d:0},{n:count+2,d:1.1},{n:count+4,d:2.2}];
+    outside=`<div style="position:absolute;right:-72px;bottom:0;width:64px;height:110px;pointer-events:none;overflow:visible">`;
+    ai.forEach(it=>{outside+=`<div style="position:absolute;bottom:8px;left:4px;animation:arrowRise 2.8s ease-out ${it.d}s infinite;opacity:0;display:flex;flex-direction:column;align-items:center;gap:1px"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5L3 6h2.5v6.5h3V6H11L7 1.5z" fill="#FF4D4F"/></svg><div style="background:linear-gradient(135deg,#FF4D4F,#FF6B6B);color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px;white-space:nowrap">${it.n}명 구매</div></div>`;});
+    [0,1,2,3].forEach(i=>{outside+=`<div style="position:absolute;bottom:4px;left:${8+i*10}px;animation:miniArrow 1.6s ease-out ${i*.35}s infinite;opacity:0"><svg width="6" height="8" viewBox="0 0 6 8" fill="none"><path d="M3 0L.5 3h1.5v5h2V3H5.5L3 0z" fill="#FF4D4F" opacity=".25"/></svg></div>`;});
+    outside+="</div>";
+  }
+  // 장바구니 우측 애니메이션
+  else if (active==="ca") outside = cartBbl("🛒 +1 담김",0)+cartBbl("담기 급증!",1)+cartBbl(`${cartCount}명!`,2);
+  else if (active==="cb") outside = cartBbl("아직 안 샀어요!",0)+cartBbl("지금 사면 할인!",1)+cartBbl("놓치지 마세요",2);
+  else if (active==="cc") outside = cartBbl("📈 급상승!",0)+cartBbl("HOT 담기",1)+`<div style="position:absolute;right:-65px;bottom:${16+2*26}px;animation:cartFloat 2.6s ease-out 1.6s infinite;opacity:0;pointer-events:none"><svg width="40" height="20" viewBox="0 0 40 20"><polyline points="2,18 10,14 18,16 26,8 34,4 38,2" fill="none" stroke="#FF6B00" stroke-width="2" stroke-linecap="round"/><circle cx="38" cy="2" r="2.5" fill="#FF6B00"/></svg></div>`;
+
+  area.innerHTML = `
+    <div style="position:relative;margin:0 80px 8px 12px">
+      ${urgentBar}
+      <div style="display:flex;align-items:center;gap:8px;background:#fff;border-radius:${cardRadius};padding:7px 8px;box-shadow:0 2px 12px rgba(0,0,0,.12);position:relative;overflow:hidden;animation:${cardAnim};border:${cardBorder}">
+        ${edgeLine}
+        <div style="width:46px;height:46px;border-radius:7px;flex-shrink:0;background:linear-gradient(135deg,#E8F5E1,#C5E8B0);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden">
+          <span style="font-size:24px">🍉</span>
+          <div style="position:absolute;bottom:0;left:0;right:0;background:${thumbBg};color:#fff;font-size:8px;font-weight:700;text-align:center;padding:1px 0;${thumbAni}">${thumbTxt}</div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;color:#777;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">1분)도매가격)하우스수박6kg</div>
+          <div style="font-size:14px;font-weight:800;color:#111;margin-bottom:2px">30,000<span style="font-size:10px;font-weight:600">원</span></div>
+          ${nudge}
+        </div>
+        <button style="background:#FF4D4F;color:#fff;border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">주문</button>
+      </div>
+      ${outside}
+    </div>`;
+
+  // 설명
+  const cs = ALL_CASES.find(c => c.id === active);
+  document.getElementById("desc-title").textContent = cs.title;
+  document.getElementById("desc-sub").textContent = cs.desc;
+  document.getElementById("desc-detail").innerHTML = cs.detail;
+}
+
+// 시뮬레이션
+setInterval(() => {
+  count = count>=58?14:count+Math.floor(Math.random()*3)+1;
+  stock = stock<=1?18:stock-Math.floor(Math.random()*2)-1;
+  cartCount = cartCount>=120?47:cartCount+Math.floor(Math.random()*4)+1;
+  if (active==="c3") nameIdx=(nameIdx+1)%NAMES.length;
+  render();
+}, 2000);
+render();
+
+// ═══ 스토어 팝업 ═══
+const PRODUCTS = [
+  {name:"[가격파괴]CK 캘빈클라인 남성팬티",price:"29,800",orig:"99,800",emoji:"🩲",bg:"#f0f0f0",sold:312,cart:94,stock:18,ship:true},
+  {name:"제스프리골드키위8알(1.3kg)",price:"18,900",orig:"28,000",emoji:"🥝",bg:"linear-gradient(135deg,#D4EDAA,#A8E06C)",sold:287,cart:156,stock:45,ship:true},
+  {name:"1분)도매가격)하우스수박6kg",price:"30,000",orig:"43,000",emoji:"🍉",bg:"linear-gradient(135deg,#E8F5E1,#C5E8B0)",sold:187,cart:178,stock:7,ship:true},
+  {name:"성주참외 2kg(6~9과)",price:"15,900",orig:"24,000",emoji:"🍈",bg:"linear-gradient(135deg,#FFF3C4,#FFE082)",sold:156,cart:121,stock:32,ship:true},
+  {name:"샤인머스캣 1.5kg(특품)",price:"29,900",orig:"45,000",emoji:"🍇",bg:"linear-gradient(135deg,#DCEDC8,#AED581)",sold:421,cart:203,stock:3,ship:true},
+  {name:"백화점납품 수박5kg",price:"42,000",orig:"58,000",emoji:"🍉",bg:"linear-gradient(135deg,#FFCDD2,#EF9A9A)",sold:89,cart:67,stock:12,ship:true},
+  {name:"애플망고 3입(태국산)",price:"24,900",orig:"35,000",emoji:"🥭",bg:"linear-gradient(135deg,#FFE0B2,#FFCC80)",sold:198,cart:142,stock:23,ship:true},
+  {name:"제주 한라봉 3kg",price:"32,000",orig:"42,000",emoji:"🍊",bg:"linear-gradient(135deg,#FFE0B2,#FFA726)",sold:134,cart:45,stock:15,ship:true},
+  {name:"블루베리 500g(국산)",price:"12,900",orig:"18,000",emoji:"🫐",bg:"linear-gradient(135deg,#D1C4E9,#B39DDB)",sold:267,cart:88,stock:41,ship:false},
+  {name:"천혜향 5kg 가정용",price:"27,500",orig:"38,000",emoji:"🍊",bg:"linear-gradient(135deg,#FFF9C4,#FFF176)",sold:145,cart:53,stock:29,ship:true},
+];
+
+let sTab = "sale";
+function getRanks(){
+  const bs=[...PRODUCTS].sort((a,b)=>b.sold-a.sold);
+  const bc=[...PRODUCTS].sort((a,b)=>b.cart-a.cart);
+  const sr={},cr={};
+  bs.forEach((p,i)=>sr[p.name]=i+1);
+  bc.forEach((p,i)=>cr[p.name]=i+1);
+  return{sr,cr};
+}
+function openStore(){document.getElementById("store-overlay").classList.add("open");sTab="sale";updateST();renderStore();}
+function closeStore(){document.getElementById("store-overlay").classList.remove("open");}
+function switchST(t){sTab=t;updateST();renderStore();}
+function updateST(){document.querySelectorAll(".store-htab").forEach(t=>t.classList.toggle("active",t.dataset.tab===sTab));}
+
+function renderStore(){
+  const list=document.getElementById("store-list");
+  const{sr,cr}=getRanks();
+  const isCartCase = ["ca","cb","cc"].includes(active);
+  let items=[...PRODUCTS];
+  if(sTab==="cart") items.sort((a,b)=>b.cart-a.cart);
+
+  let html="";
+  items.forEach((p,i)=>{
+    const isCrit=p.stock<10;
+    const isTopSold=sr[p.name]<=3;
+    const isTopCart=cr[p.name]<=3;
+    let cls="si";
+    if(isTopSold)cls+=" hot-row";
+    else if(isTopCart)cls+=" cart-row";
+
+    let badges="";
+    // 구매 넛징 뱃지 (항상 표시)
+    if(isTopSold) badges+=`<span style="display:inline-flex;align-items:center;gap:2px;background:#FFF0F0;color:#FF4D4F;font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px"><span style="width:4px;height:4px;border-radius:50%;background:#FF4D4F;animation:pulse 1s infinite"></span>🔥 ${p.sold}명 구매</span>`;
+
+    // 장바구니 넛징 뱃지 (케이스별 분기)
+    if(isTopCart) {
+      if(active==="ca") badges+=`<span style="display:inline-flex;align-items:center;gap:2px;background:#FFF5EB;color:#FF6B00;font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px;animation:cartBounce 2s infinite ${i*.2}s"><span style="animation:cartWiggle 1.5s infinite">🛒</span> ${p.cart}명 담는중</span>`;
+      else if(active==="cb") {
+        const rate=Math.round((p.sold/p.cart)*100);
+        badges+=`<span style="display:inline-flex;align-items:center;gap:2px;background:#FFF5EB;color:#FF6B00;font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px;animation:pulse 1.5s infinite">🛒 ${p.cart}명 담음 → 구매 ${rate}%</span>`;
+      }
+      else if(active==="cc") badges+=`<span style="display:inline-flex;align-items:center;gap:2px;background:linear-gradient(90deg,#FFF5EB,#FFE8D6);color:#FF6B00;font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px;animation:cartBounce 2s infinite">📈 담기 급증</span>`;
+      else badges+=`<span style="display:inline-flex;align-items:center;gap:2px;background:#FFF5EB;color:#FF6B00;font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px;animation:cartBounce 2s infinite ${i*.2}s">🛒 ${p.cart}명 담는중</span>`;
+    }
+    if(isCrit) badges+=`<span style="display:inline-flex;align-items:center;gap:2px;background:#FEF2F2;color:#DC2626;font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px;animation:pulse .8s infinite">⚡ ${p.stock}개 남음</span>`;
+
+    // 장바구니 전환바 (Case B 전용, 스토어에서도 TOP3에 표시)
+    let cartBar = "";
+    if(active==="cb" && isTopCart) {
+      const rate=Math.round((p.sold/p.cart)*100);
+      cartBar=`<div style="width:100%;height:3px;border-radius:1.5px;background:#FFE0C2;overflow:hidden;margin-top:3px;position:relative"><div style="width:${rate}%;height:100%;border-radius:1.5px;background:linear-gradient(90deg,#FF6B00,#FF4D4F)"></div></div><div style="font-size:8px;color:#FF6B00;margin-top:1px">${p.cart-p.sold}명 아직 미구매</div>`;
+    }
+
+    let stockBar="";
+    if(isCrit){const pct=Math.max(0,(p.stock/50)*100);stockBar=`<div style="width:100%;height:2.5px;border-radius:1.5px;background:#f0f0f0;overflow:hidden;margin-top:3px"><div style="width:${pct}%;height:100%;border-radius:1.5px;background:linear-gradient(90deg,#DC2626,#FF4D4F);animation:pulse 1s infinite"></div></div>`;}
+
+    let thumbBadge="";
+    if(isTopSold&&sr[p.name]===1) thumbBadge=`<div class="si-thumb-badge">🔥 1위</div>`;
+    else if(isCartCase&&isTopCart&&cr[p.name]===1) thumbBadge=`<div class="si-thumb-badge" style="background:#FF6B00">🛒 1위</div>`;
+
+    html+=`<div class="${cls}" style="animation:rankSlide .25s ease-out ${i*.04}s both">
+      <div class="si-thumb" style="background:${p.bg}">${thumbBadge}<span style="font-size:30px">${p.emoji}</span></div>
+      <div class="si-info">
+        <div class="si-name">${p.name}</div>
+        <div class="si-prices">${p.orig?`<span class="si-orig">${p.orig}원</span>`:""}<span class="si-sale">${p.price}원</span><span class="si-live">라이브가</span></div>
+        ${p.ship?`<div style="font-size:9px;color:#999;margin-bottom:2px">🚚 무료배송</div>`:""}
+        ${badges?`<div class="si-badges">${badges}</div>`:""}
+        ${cartBar}${stockBar}
+      </div>
+      <button class="si-buy">🛒 구매</button>
+    </div>`;
+  });
+  list.innerHTML=html;
+}
+</script>
+</body>
+</html>
